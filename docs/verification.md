@@ -13,6 +13,18 @@ depends on periodic task wakeups. This points to the FreeRTOS tick/wakeup path,
 although serial logging remains a possible confounder until the wakeup path is
 verified independently.
 
+### Static ELF audit
+
+The production ELF places the vector table at `0x08000000`. Its SVC, PendSV,
+and SysTick entries resolve to `SVC_Handler` (`0x08001810`),
+`PendSV_Handler` (`0x08001870`), and `SysTick_Handler` (`0x08003ef8`). The
+disassembly also shows `vTaskDelay()` setting `PENDSVSET`,
+`xTaskIncrementTick()` incrementing the tick and moving expired tasks from the
+delayed list to the ready list, and PendSV calling `vTaskSwitchContext()`.
+These checks rule out a missing or weak exception-vector mapping in the linked
+image. They do not show whether PendSV runs in Wokwi or whether UART output is
+being lost after the delay.
+
 | ID | Stimulus | Expected result | Actual observation | Result |
 | --- | --- | --- | --- | --- |
 | FT-01 | Set DHT22 to 28 C, select Temperature | OLED shows about 28.0 C within 2 s | Not observed | Pending |
