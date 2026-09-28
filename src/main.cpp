@@ -9,6 +9,7 @@
 #include "task.h"
 
 extern "C" void xPortSysTickHandler(void);
+extern "C" void vPortSetupTimerInterrupt(void);
 
 namespace {
 // SysTick starts before the first task runs. Keep the ISR independent of the
@@ -29,6 +30,19 @@ bool createTask(TaskFunction_t function, const char *name,
 extern "C" void SysTick_Handler(void) {
   HAL_IncTick();
   if (schedulerStarted) xPortSysTickHandler();
+}
+
+// FreeRTOS calls this after it has created the idle task and marked the
+// scheduler running, with interrupts masked. Start the RTOS tick only here;
+// HAL_Init() had already enabled SysTick for HAL timeouts before this point.
+extern "C" void vPortSetupTimerInterrupt(void) {
+  SysTick->CTRL = 0U;
+  SysTick->VAL = 0U;
+  SysTick->LOAD = (configCPU_CLOCK_HZ / configTICK_RATE_HZ) - 1UL;
+  schedulerStarted = true;
+  SysTick->CTRL = SysTick_CTRL_CLKSOURCE_Msk |
+                  SysTick_CTRL_TICKINT_Msk |
+                  SysTick_CTRL_ENABLE_Msk;
 }
 
 extern "C" void vApplicationMallocFailedHook(void) { taskDISABLE_INTERRUPTS(); for (;;) {} }
@@ -58,9 +72,7 @@ void app_main() {
       createTask(DisplayTask, "DisplayTask", 320, 1);
   if (!created) for (;;) {}
   boardLog("Tasks created; starting scheduler\r\n");
-  schedulerStarted = true;
   vTaskStartScheduler();
-  schedulerStarted = false;
   boardLog("Startup failed: scheduler returned\r\n");
   for (;;) {}
 }
