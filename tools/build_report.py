@@ -61,7 +61,7 @@ def table(headers, rows, widths):
 
 p("BCA182 Laboratory Activity 1", "TitleCustom")
 p("Real-Time Multisensor Room Monitoring System", "CenteredCustom")
-p("Name: ______________________________    Section: ______________    Date: ______________")
+p("Name: Kent Alexis Alia&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Section: B182&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Date: 9/28/26")
 p("Status: firmware build and host unit tests verified; interactive Wokwi verification and fault experiments remain pending.")
 
 section("1. Problem and Requirements")
@@ -98,7 +98,7 @@ p("board.cpp initializes HSI/PLL at 64 MHz, GPIO, ADC1, I2C1, USART1 and two tim
 p("The LDR module's AO voltage decreases as simulated illumination increases. The firmware maps the 12-bit ADC code inversely into an approximate 0-100% relative brightness scale; it does not infer calibrated lux. The encoder's CLK falling edge is handled by EXTI1; its DT level determines direction. DisplayTask alone builds a 1 KB page buffer and writes it over I2C1 to the SSD1306. TIM4 channel 3 generates a 500 Hz, 50% duty cycle buzzer waveform.")
 
 section("5. Verification and Testing")
-p("PlatformIO Core 6.2.0 built the bluepill_f103c8 STM32Cube target successfully. The final local build used 20,320 of 65,536 flash bytes and 12,056 of 20,480 static RAM bytes. Fifteen native Unity tests passed: five alarm threshold cases, four navigation cases, four state transition cases and two brightness endpoints. Those tests exercise pure decisions; they do not test HAL timing or Wokwi wiring.")
+p("PlatformIO Core 6.2.0 built the bluepill_f103c8 STM32Cube target successfully. The latest local build used 20,628 of 65,536 flash bytes and 12,056 of 20,480 static RAM bytes. Fifteen native Unity tests passed: five alarm threshold cases, four navigation cases, four state transition cases and two brightness endpoints. Those tests exercise pure decisions; they do not test HAL timing or Wokwi wiring.")
 table(["Functional tests", "Evidence state"], [
     ("FT-01 to FT-03: DHT/ADC display", "Pending interactive Wokwi observation"),
     ("FT-04 to FT-05: encoder navigation", "Pending interactive Wokwi observation"),
@@ -108,11 +108,11 @@ table(["Functional tests", "Evidence state"], [
 p("The reproducible stimulus, expected output and actual-observation fields are in docs/verification.md. No Wokwi case has been marked PASS without observing it. The three deliberate experiments - removing blocking, raising a frequent task's priority, and bypassing the UART mutex - also remain pending and must be performed on a temporary branch, observed, and reverted.")
 
 section("6. Static Code Analysis")
-p("The first <b>pio check -e bluepill_f103c8</b> run passed with zero high, zero medium and seven low style messages. One local name shadowed a function and was renamed. A redundant display state assignment was removed. A rerun passed with five low messages. These C-style-cast reports point to expansion of STM32 HAL register or FreeRTOS macros at board.cpp and input.cpp call sites. They are in upstream macro definitions, not explicit casts in project source.")
+p("The first <b>pio check -e bluepill_f103c8</b> run passed with zero high, zero medium and seven low style messages. One local name shadowed a function and was renamed. A redundant display state assignment was removed. The latest rerun passed with zero high, zero medium and eight low messages after the Wokwi startup diagnostics were added. These C-style-cast reports point to expansion of STM32 HAL register or FreeRTOS macros at board.cpp, input.cpp and main.cpp call sites. They are in upstream macro definitions, not explicit casts in project source.")
 table(["Finding", "Location / cause", "Resolution"], [
     ("Shadowed name", "display.cpp:55; local index", "Renamed to offset"),
     ("Redundant assignment", "display.cpp:134; screen flag", "Removed flag and assignment"),
-    ("C-style casts (5)", "HAL / FreeRTOS macro expansion", "Retained; third-party macro style"),
+    ("C-style casts (8)", "HAL / FreeRTOS macro expansion", "Retained; third-party macro style"),
 ], [1.4*inch, 2.65*inch, 2.6*inch])
 
 section("7. Engineering Discussion")
@@ -153,6 +153,6 @@ document = SimpleDocTemplate(str(OUT), pagesize=(8.5*inch, 11*inch),
                              rightMargin=.75*inch, leftMargin=.75*inch,
                              topMargin=.7*inch, bottomMargin=.7*inch,
                              title="BCA182 Laboratory Activity 1 Report",
-                             author="BCA182 project")
+                             author="Kent Alexis Alia")
 document.build(story, onFirstPage=footer, onLaterPages=footer)
 print(OUT)
