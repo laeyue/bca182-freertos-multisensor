@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "author": "BCA182 room monitor",
+  "editor": "wokwi",
+  "parts": [
+    { "type": "board-stm32-bluepill", "id": "mcu", "top": 130, "left": 280, "attrs": {} },
+    { "type": "wokwi-dht22", "id": "dht", "top": 5, "left": 30, "attrs": { "temperature": "24", "humidity": "40" } },
+    { "type": "wokwi-photoresistor-sensor", "id": "ldr", "top": 165, "left": 15, "attrs": { "lux": "500" } },
+    { "type": "wokwi-pir-motion-sensor", "id": "pir", "top": 340, "left": 25, "attrs": { "delayTime": "5" } },
+    { "type": "wokwi-ky-040", "id": "encoder", "top": 385, "left": 310, "attrs": {} },
+    { "type": "board-ssd1306", "id": "oled", "top": 0, "left": 550, "attrs": { "i2cAddress": "0x3c" } },
+    { "type": "wokwi-buzzer", "id": "buzzer", "top": 275, "left": 570, "attrs": { "mode": "accurate" } }
+  ],
+  "connections": [
+    ["mcu:3V3.1", "dht:VCC", "red", []],
+    ["mcu:GND.1", "dht:GND", "black", []],
+    ["mcu:B12", "dht:SDA", "green", []],
+    ["mcu:3V3.1", "ldr:VCC", "red", []],
+    ["mcu:GND.1", "ldr:GND", "black", []],
+    ["mcu:A0", "ldr:AO", "orange", []],
+    ["mcu:3V3.1", "pir:VCC", "red", []],
+    ["mcu:GND.1", "pir:GND", "black", []],
+    ["mcu:B13", "pir:OUT", "purple", []],
+    ["mcu:3V3.1", "encoder:VCC", "red", []],
+    ["mcu:GND.1", "encoder:GND", "black", []],
+    ["mcu:A1", "encoder:CLK", "blue", []],
+    ["mcu:A2", "encoder:DT", "cyan", []],
+    ["mcu:3V3.1", "oled:VCC", "red", []],
+    ["mcu:GND.1", "oled:GND", "black", []],
+    ["mcu:B6", "oled:SCL", "blue", []],
+    ["mcu:B7", "oled:SDA", "green", []],
+    ["mcu:GND.1", "buzzer:1", "black", []],
+    ["mcu:B8", "buzzer:2", "yellow", []],
+    ["$serialMonitor:RX", "mcu:A9", "", []],
+    ["$serialMonitor:TX", "mcu:A10", "", []]
+  ],
+  "dependencies": {}
+}

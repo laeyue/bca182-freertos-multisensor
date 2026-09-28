@@ -1,0 +1,13 @@
+.pio/
+.uv-cache/
+.uv-python/
+.uv-tools/
+.venv/
+__pycache__/
+*.pyc
+*.elf
+*.bin
+*.hex
+*.map
+handout-*.png
+
