@@ -4,6 +4,7 @@
 #include "task.h"
 
 void MotionTask(void *) {
+  boardLog("Scheduler running\r\n");
   TickType_t lastWake = xTaskGetTickCount();
   bool previous = false;
   for (;;) {
@@ -17,4 +18,3 @@ void MotionTask(void *) {
     vTaskDelayUntil(&lastWake, pdMS_TO_TICKS(50));
   }
 }
-

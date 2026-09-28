@@ -30,7 +30,14 @@ static void initClocks() {
 }
 
 void boardInit() {
+  // Wokwi maps the firmware vectors at flash base but does not alias them at 0x0.
+  SCB->VTOR = FLASH_BASE;
+  __DSB();
+  __ISB();
   HAL_Init();
+  SCB->VTOR = FLASH_BASE;
+  __DSB();
+  __ISB();
   initClocks();
   __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();

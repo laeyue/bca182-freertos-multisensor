@@ -10,6 +10,18 @@
 
 extern "C" void xPortSysTickHandler(void);
 
+namespace {
+bool createTask(TaskFunction_t function, const char *name,
+                uint16_t stackWords, UBaseType_t priority) {
+  if (xTaskCreate(function, name, stackWords, nullptr, priority, nullptr) == pdPASS)
+    return true;
+  boardLog("Startup failed: cannot create ");
+  boardLog(name);
+  boardLog("\r\n");
+  return false;
+}
+}
+
 extern "C" void SysTick_Handler(void) {
   HAL_IncTick();
   if (xTaskGetSchedulerState() != taskSCHEDULER_NOT_STARTED)
@@ -22,18 +34,29 @@ extern "C" void vApplicationStackOverflowHook(TaskHandle_t, char *) {
   for (;;) {}
 }
 
+extern "C" void HardFault_Handler(void) {
+  static const char message[] = "HardFault\r\n";
+  HAL_UART_Transmit(&huart1, reinterpret_cast<uint8_t *>(const_cast<char *>(message)),
+                    sizeof(message) - 1, 100);
+  for (;;) {}
+}
+
 void app_main() {
   if (!createRtosObjects()) for (;;) {}
+  boardLog(SCB->VTOR == FLASH_BASE ? "Vector table: flash\r\n"
+                                   : "Vector table: zero\r\n");
   boardLog("BCA182 FreeRTOS Multisensor System starting...\r\n");
   const bool created =
-      xTaskCreate(MotionTask, "MotionTask", 160, nullptr, 3, nullptr) == pdPASS &&
-      xTaskCreate(InputTask, "InputTask", 160, nullptr, 3, nullptr) == pdPASS &&
-      xTaskCreate(StateTask, "StateTask", 192, nullptr, 3, nullptr) == pdPASS &&
-      xTaskCreate(SensorTask, "SensorTask", 256, nullptr, 2, nullptr) == pdPASS &&
-      xTaskCreate(AlarmTask, "AlarmTask", 192, nullptr, 2, nullptr) == pdPASS &&
-      xTaskCreate(DisplayTask, "DisplayTask", 320, nullptr, 1, nullptr) == pdPASS;
+      createTask(MotionTask, "MotionTask", 160, 3) &&
+      createTask(InputTask, "InputTask", 160, 3) &&
+      createTask(StateTask, "StateTask", 192, 3) &&
+      createTask(SensorTask, "SensorTask", 256, 2) &&
+      createTask(AlarmTask, "AlarmTask", 192, 2) &&
+      createTask(DisplayTask, "DisplayTask", 320, 1);
   if (!created) for (;;) {}
+  boardLog("Tasks created; starting scheduler\r\n");
   vTaskStartScheduler();
+  boardLog("Startup failed: scheduler returned\r\n");
   for (;;) {}
 }
 
@@ -41,4 +64,3 @@ int main() {
   boardInit();
   app_main();
 }
-
