@@ -7,8 +7,11 @@
 
 static bool waitForPin(GPIO_PinState level, uint32_t timeoutUs) {
   const uint32_t start = boardMicros();
+  uint32_t spins = 0;
+  const uint32_t spinLimit = timeoutUs * 64U;
   while (HAL_GPIO_ReadPin(GPIOB, DHT_PIN) != level) {
-    if (static_cast<uint16_t>(boardMicros() - start) > timeoutUs) return false;
+    if (static_cast<uint16_t>(boardMicros() - start) > timeoutUs ||
+        ++spins >= spinLimit) return false;
   }
   return true;
 }
@@ -17,6 +20,7 @@ static bool readDht(float &temperature, float &humidity) {
   uint8_t bytes[5] = {};
   HAL_GPIO_WritePin(GPIOB, DHT_PIN, GPIO_PIN_RESET);
   vTaskDelay(pdMS_TO_TICKS(2));
+  boardLog("Sensor: DHT start delay finished\r\n");
   taskENTER_CRITICAL();
   HAL_GPIO_WritePin(GPIOB, DHT_PIN, GPIO_PIN_SET);
   bool ok = waitForPin(GPIO_PIN_RESET, 120) &&
@@ -46,7 +50,10 @@ void SensorTask(void *) {
   TickType_t lastWake = xTaskGetTickCount();
   for (;;) {
     SensorData data = {};
+    boardLog("Sensor: sampling DHT22\r\n");
     data.dhtValid = readDht(data.temperature, data.humidity);
+    boardLog(data.dhtValid ? "Sensor: DHT22 read complete\r\n"
+                           : "Sensor: DHT22 read timed out\r\n");
     data.lightLevel = lightPercentFromAdc(boardReadLightAdc());
     xQueueOverwrite(displaySensorQueue, &data);
     xQueueOverwrite(alarmSensorQueue, &data);
@@ -64,4 +71,3 @@ void SensorTask(void *) {
     vTaskDelayUntil(&lastWake, pdMS_TO_TICKS(2000));
   }
 }
-

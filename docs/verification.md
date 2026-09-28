@@ -2,6 +2,17 @@
 
 Build with `pio run -e bluepill_f103c8`, start Wokwi for VS Code, and record the **observed** OLED/serial/buzzer behavior before assigning PASS or FAIL. These rows are intentionally pending because a firmware build and host unit tests do not execute the Wokwi peripherals.
 
+## Startup wakeup diagnosis
+
+In a live Wokwi run, the serial output reached `Scheduler running` and
+`Sensor: sampling DHT22`, then stopped. After 12.2 simulated seconds it had
+not printed `Sensor: DHT start delay finished` or the MotionTask heartbeat.
+The missing sensor line precedes DHT pin decoding, so a DHT22 response or
+checksum failure cannot explain this stall. The MotionTask heartbeat also
+depends on periodic task wakeups. This points to the FreeRTOS tick/wakeup path,
+although serial logging remains a possible confounder until the wakeup path is
+verified independently.
+
 | ID | Stimulus | Expected result | Actual observation | Result |
 | --- | --- | --- | --- | --- |
 | FT-01 | Set DHT22 to 28 C, select Temperature | OLED shows about 28.0 C within 2 s | Not observed | Pending |
@@ -31,4 +42,3 @@ These experiments should be performed in a temporary branch or with reversible e
 2. Serial log showing sensor updates and ACTIVE/INACTIVE transition.
 3. Short note about whether buzzer sound is audible at alarm boundaries.
 4. Before/after scheduling observations for each deliberate fault experiment.
-

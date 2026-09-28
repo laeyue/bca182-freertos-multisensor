@@ -20,7 +20,7 @@ env.BuildSources(
 )
 env.BuildSources(
     os.path.join("$BUILD_DIR", "freertos-port"),
-    os.path.join(source, "portable", "GCC", "ARM_CM3"),
+    os.path.join(env.subst("$PROJECT_DIR"), "lib", "freertos_port_cm3"),
     src_filter=["+<port.c>"],
 )
 env.BuildSources(
@@ -28,4 +28,3 @@ env.BuildSources(
     os.path.join(source, "portable", "MemMang"),
     src_filter=["+<heap_4.c>"],
 )
-

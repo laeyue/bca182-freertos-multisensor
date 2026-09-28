@@ -39,6 +39,9 @@ void boardInit() {
   __DSB();
   __ISB();
   initClocks();
+  CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
+  DWT->CYCCNT = 0;
+  DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
   __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
   __HAL_RCC_AFIO_CLK_ENABLE();
@@ -152,7 +155,9 @@ uint16_t boardReadLightAdc() {
   return value;
 }
 
-uint32_t boardMicros() { return __HAL_TIM_GET_COUNTER(&htim2); }
+uint32_t boardMicros() {
+  return DWT->CYCCNT / (SystemCoreClock / 1000000U);
+}
 
 void boardBuzzer(bool enabled) {
   static bool sounding = false;

@@ -11,6 +11,10 @@
 extern "C" void xPortSysTickHandler(void);
 
 namespace {
+// SysTick starts before the first task runs. Keep the ISR independent of the
+// FreeRTOS API while the kernel is still initializing.
+volatile bool schedulerStarted = false;
+
 bool createTask(TaskFunction_t function, const char *name,
                 uint16_t stackWords, UBaseType_t priority) {
   if (xTaskCreate(function, name, stackWords, nullptr, priority, nullptr) == pdPASS)
@@ -24,8 +28,7 @@ bool createTask(TaskFunction_t function, const char *name,
 
 extern "C" void SysTick_Handler(void) {
   HAL_IncTick();
-  if (xTaskGetSchedulerState() != taskSCHEDULER_NOT_STARTED)
-    xPortSysTickHandler();
+  if (schedulerStarted) xPortSysTickHandler();
 }
 
 extern "C" void vApplicationMallocFailedHook(void) { taskDISABLE_INTERRUPTS(); for (;;) {} }
@@ -55,7 +58,9 @@ void app_main() {
       createTask(DisplayTask, "DisplayTask", 320, 1);
   if (!created) for (;;) {}
   boardLog("Tasks created; starting scheduler\r\n");
+  schedulerStarted = true;
   vTaskStartScheduler();
+  schedulerStarted = false;
   boardLog("Startup failed: scheduler returned\r\n");
   for (;;) {}
 }
