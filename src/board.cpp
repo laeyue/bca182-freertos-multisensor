@@ -59,6 +59,7 @@ void boardInit() {
   gpio.Pin = BUZZER_PIN;
   gpio.Mode = GPIO_MODE_AF_PP;
   gpio.Pull = GPIO_NOPULL;
+  gpio.Speed = GPIO_SPEED_FREQ_HIGH;
   HAL_GPIO_Init(GPIOB, &gpio);
   gpio.Pin = PIR_PIN;
   gpio.Mode = GPIO_MODE_INPUT;
