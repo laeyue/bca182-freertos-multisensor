@@ -4,7 +4,7 @@
 
 A simulated STM32F103C8 Blue Pill monitors temperature, relative humidity, ambient brightness, and PIR motion. A rotary encoder selects one measurement on an SSD1306 OLED. A 500 Hz PWM buzzer sounds outside the inclusive 18-30 C temperature range. After 15 seconds without PIR activity, the OLED blanks; new motion restores it. The firmware uses STM32Cube HAL and native FreeRTOS APIs, with no Arduino framework or libraries.
 
-The source builds for the Blue Pill, and 15 host logic tests pass. The Wokwi circuit is configured but interactive simulator results still need to be recorded in [the verification record](docs/verification.md). This distinction is intentional: a successful cross-compile does not prove peripheral behavior in simulation.
+The Blue Pill firmware builds and all 15 host logic tests pass. In the latest VS Code Wokwi run, the DHT22 returned checksum-valid readings at 24 C / 40% and 32 C / 65%; the LDR output changed with its lux control, and the inactivity transition was observed. The OLED page controls, buzzer response, and some PIR transitions still need complete interactive evidence. See [the verification record](docs/verification.md) for observed results and remaining cases.
 
 ## Features
 
@@ -32,7 +32,7 @@ flowchart LR
   STM --> UART[USART1 PA9 diagnostics]
 ```
 
-*Figure 1. Peripheral signals and their MCU pins. The editable Wokwi circuit is [diagram.json](diagram.json); its simulator screenshot should be captured after verification.*
+*Figure 1. Peripheral signals and their MCU pins. The editable Wokwi circuit is [diagram.json](diagram.json). See [the verification record](docs/verification.md) for live simulation observations.*
 
 ## FreeRTOS Architecture
 
@@ -136,23 +136,29 @@ The 15 Unity cases cover all five alarm boundaries, four navigation transitions,
 pio check -e bluepill_f103c8
 ```
 
-The first run found seven low-severity style findings and no medium or high findings. Two local issues were corrected: a variable shadow and redundant state assignment. The remaining C-style cast messages originate in STM32 HAL register macros expanded on lines assigning peripheral instances and releasing the FreeRTOS semaphore; see the report for interpretation.
+The latest run reports 16 low-severity C-style-cast findings and no medium or high findings. The casts come from STM32 HAL register or FreeRTOS macro expansions at the project call sites; see the report for details.
 
 ## Functional Verification
 
-[The verification record](docs/verification.md) lists FT-01 through FT-10 with stimuli and expected outcomes. Actual Wokwi observations and screenshots are pending an interactive simulation run; no test is marked PASS based only on compilation.
+[The verification record](docs/verification.md) lists FT-01 through FT-10 with stimuli, expected outcomes and actual observations. It distinguishes serial-level sensor confirmation from OLED or buzzer behavior that has not yet been captured. No test is marked PASS based only on compilation.
+
+### Wokwi evidence
+
+![Full Wokwi circuit](docs/evidence/wokwi-full-circuit.png)
+
+![Active OLED Temperature page](docs/evidence/wokwi-oled-active.png)
 
 ## Engineering Decisions
 
 - Two sensor queues give display and alarm independent newest-value mailboxes. A single queue with two consumers would split readings unpredictably.
-- The DHT22 transaction temporarily enters a FreeRTOS critical section for its roughly 4 ms pulse capture. This simplifies bit timing but temporarily delays lower-priority interrupts; a timer-capture or DMA design would scale better on hardware.
+- The DHT22 transaction samples each data bit 40 us after its rising edge, between the sensor's short zero and long one pulses. The roughly 4 ms transaction runs inside a FreeRTOS critical section, so it temporarily delays lower-priority interrupts; a timer-capture design would scale better on hardware.
 - The ADC percentage is inverted because the Wokwi LDR module AO voltage falls as brightness rises. It is a relative indication with no lux claim.
 - TIM4 produces an audible 500 Hz square wave; a steady GPIO level would not drive a piezo buzzer properly.
 - The alarm is muted in INACTIVE, following the lab's ACTIVE behavior description. Temperature evaluation resumes from current samples when activity returns.
 
 ## Limitations
 
-The simulation has not yet been run interactively in this workspace, so timing and peripheral behavior remain to be verified. DHT22 sampling masks interrupts for several milliseconds. The inactivity timeout measures from the last observed PIR-high sample; the PIR simulator itself holds output high for about five seconds. No environmental sensor calibration is attempted. DHT errors suppress the alarm rather than sounding a fault tone. Wokwi circuitry does not establish electrical suitability for physical hardware.
+Interactive Wokwi checks cover DHT22 decoding at two settings, LDR response, task wakeups and the inactive timeout. Encoder page changes, complete PIR reactivation evidence, OLED values and alarm/buzzer behavior remain unverified. DHT22 sampling masks interrupts for several milliseconds. The inactivity timeout measures from the last observed PIR-high sample; the PIR simulator holds output high for about five seconds. No environmental sensor calibration is attempted. DHT errors suppress the alarm rather than sounding a fault tone. Wokwi circuitry does not establish electrical suitability for physical hardware.
 
 ## Future Improvements
 

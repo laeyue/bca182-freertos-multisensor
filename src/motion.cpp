@@ -17,6 +17,7 @@ void MotionTask(void *) {
       previous = detected;
     }
     vTaskDelayUntil(&lastWake, pdMS_TO_TICKS(50));
-    if (++heartbeats % 20U == 0U) boardLog("Motion: heartbeat\r\n");
+    if (++heartbeats % 20U == 0U)
+      boardLog(detected ? "Motion: heartbeat PIR high\r\n" : "Motion: heartbeat PIR low\r\n");
   }
 }

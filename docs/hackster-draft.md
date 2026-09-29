@@ -1,6 +1,6 @@
 # Hackster.io draft: FreeRTOS STM32 Room Multisensor
 
-**Publication state:** Draft. Publish after the Wokwi functional record and fault experiments have actual observations, and after a public GitHub repository exists. Replace the bracketed link and author information with the student's own details.
+**Publication state:** Local draft only. The full Wokwi functional matrix and deliberate fault experiments are not complete. Replace the repository link and author details with the student's own information before any publication.
 
 ## Project Overview
 
@@ -12,7 +12,11 @@ A room monitor is a compact way to study task scheduling and communication. Each
 
 ## Components and Circuit
 
-The Wokwi circuit contains a Blue Pill, DHT22, LDR module, PIR, KY-040 encoder, SSD1306 OLED and buzzer. The full wiring is in `diagram.json` and the pin table in the README. [Insert a screenshot from the verified simulator here.]
+The Wokwi circuit contains a Blue Pill, DHT22, LDR module, PIR, KY-040 encoder, SSD1306 OLED and buzzer. The full wiring is in `diagram.json` and the pin table in the README. The current local screenshots show the full circuit and the active Temperature page; the other display pages remain to be captured.
+
+![Wokwi full circuit](evidence/wokwi-full-circuit.png)
+
+![OLED Temperature page while active](evidence/wokwi-oled-active.png)
 
 ## FreeRTOS Architecture
 
@@ -20,11 +24,11 @@ Six tasks separate sensor sampling, encoder handling, PIR monitoring, state tran
 
 ## How It Works
 
-The DHT22 is decoded through timed GPIO pulses and checksum verification. ADC1 reads the photoresistor module; its output is shown as a relative 0-100% brightness indicator, not calibrated lux. An EXTI interrupt records encoder steps for InputTask. The OLED has a single owner, DisplayTask. TIM4 channel 3 supplies a square wave for the piezo buzzer.
+The DHT22 decoder samples each high pulse 40 us after its rising edge, between the 26-28 us zero pulse and approximately 70 us one pulse, then checks the five-byte checksum. In VS Code Wokwi, repeated checksum-valid readings were observed at 24 C / 40% and 32 C / 65%. ADC1 reads the photoresistor module; its output is shown as relative brightness, not calibrated lux. An EXTI interrupt records encoder steps for InputTask. The OLED has a single owner, DisplayTask. TIM4 channel 3 supplies a square wave for the piezo buzzer.
 
 ## Testing and Verification
 
-The STM32Cube target builds in PlatformIO. Fifteen Unity tests pass for alarm boundaries, navigation, state changes and brightness conversion. Cppcheck reports no high or medium findings; five low style messages are associated with vendor macro expansions. [Insert verified Wokwi FT-01 to FT-10 observations and fault-experiment results here after running them.]
+The STM32Cube target builds in PlatformIO. Fifteen Unity tests pass for alarm boundaries, navigation, state changes and brightness conversion. `pio check` reports no high or medium findings and 16 low style findings, all C-style cast reports from STM32 HAL or FreeRTOS macro expansion. Wokwi also confirmed the changed LDR reading and the inactive timeout. The verification record lists the remaining OLED, encoder, alarm and PIR cases as pending; the three deliberate fault experiments have not been run.
 
 ## Challenges and Lessons Learned
 
@@ -32,7 +36,7 @@ One queue with two destructive consumers would split sensor updates, so separate
 
 ## Limitations and Future Improvements
 
-Wokwi behavior needs an interactive verification run before performance claims can be made. A timer input capture for DHT pulses, sensor fault alert, calibrated light conversion and measured task latency would strengthen a hardware version.
+The local Wokwi run covers DHT22 decoding, LDR response and inactivity, but not every end-to-end display or buzzer test. A timer input capture for DHT pulses, sensor fault alert, calibrated light conversion and measured task latency would strengthen a hardware version.
 
 ## Source Code
 
@@ -41,4 +45,3 @@ Wokwi behavior needs an interactive verification run before performance claims c
 ## References
 
 PlatformIO STM32Cube documentation; Wokwi Blue Pill and component documentation; FreeRTOS kernel included with STM32CubeF1; BCA182 Laboratory Activity 1 (MSU-IIT, September 2026).
-

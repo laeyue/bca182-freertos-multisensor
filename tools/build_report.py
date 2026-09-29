@@ -15,17 +15,17 @@ OUT = ROOT / "docs" / "laboratory-report.pdf"
 styles = getSampleStyleSheet()
 styles.add(ParagraphStyle(name="TitleCustom", parent=styles["Title"], fontSize=17,
                           leading=21, spaceAfter=14, textColor=colors.HexColor("#15344b")))
-styles.add(ParagraphStyle(name="SectionCustom", parent=styles["Heading1"], fontSize=12,
-                          leading=15, spaceBefore=12, spaceAfter=6,
-                          textColor=colors.HexColor("#15344b")))
-styles.add(ParagraphStyle(name="BodyCustom", parent=styles["BodyText"], fontSize=9,
-                          leading=13, spaceAfter=7))
-styles.add(ParagraphStyle(name="SmallCustom", parent=styles["BodyText"], fontSize=7.5,
-                          leading=10))
-styles.add(ParagraphStyle(name="SubCustom", parent=styles["Heading2"], fontSize=10,
-                          leading=12, spaceBefore=8, spaceAfter=4))
+styles.add(ParagraphStyle(name="SectionCustom", parent=styles["Heading1"], fontSize=11.5,
+                          leading=14, spaceBefore=10, spaceAfter=5,
+                          keepWithNext=True, textColor=colors.HexColor("#15344b")))
+styles.add(ParagraphStyle(name="BodyCustom", parent=styles["BodyText"], fontSize=8.6,
+                          leading=11.5, spaceAfter=6))
+styles.add(ParagraphStyle(name="SmallCustom", parent=styles["BodyText"], fontSize=7.2,
+                          leading=9))
+styles.add(ParagraphStyle(name="SubCustom", parent=styles["Heading2"], fontSize=9.5,
+                          leading=11, spaceBefore=6, spaceAfter=3))
 styles.add(ParagraphStyle(name="CenteredCustom", parent=styles["BodyText"],
-                          alignment=TA_CENTER, fontSize=9, leading=13))
+                          alignment=TA_CENTER, fontSize=9, leading=13, spaceAfter=6))
 
 story = []
 
@@ -61,8 +61,8 @@ def table(headers, rows, widths):
 
 p("BCA182 Laboratory Activity 1", "TitleCustom")
 p("Real-Time Multisensor Room Monitoring System", "CenteredCustom")
-p("Name: Kent Alexis Alia&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Section: B182&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Date: 9/28/26")
-p("Status: firmware build and host unit tests verified; interactive Wokwi verification and fault experiments remain pending.")
+p("Name: Kent Alexis Alia&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Section: B182&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Date: 9/29/26")
+p("Status: firmware build, host tests, and selected Wokwi sensor checks verified; full OLED, encoder, alarm, PIR, and fault-experiment evidence remains pending.")
 
 section("1. Problem and Requirements")
 p("The device monitors temperature, humidity, relative brightness and motion with a simulated STM32F103C8. A rotary encoder selects one of four OLED pages. A PWM buzzer indicates temperatures strictly below 18 C or strictly above 30 C. A 15-second no-motion interval enters INACTIVE; PIR activity restores ACTIVE. The architecture must use multiple FreeRTOS tasks, queues, a mutex, an event mechanism and periodic execution.")
@@ -94,50 +94,49 @@ p("A Running task currently uses the CPU. A Ready task can run but waits for sch
 p("vTaskDelayUntil() computes each wake time from the previous scheduled wake, keeping nominal sensor samples 2 seconds apart. vTaskDelay(2000) would add the execution time of each DHT/ADC cycle to every period, creating cumulative drift.")
 
 section("4. Implementation")
-p("board.cpp initializes HSI/PLL at 64 MHz, GPIO, ADC1, I2C1, USART1 and two timers. TIM2 supplies microsecond pulse timing for the DHT22. SensorTask pulls its open-drain data pin low for 2 ms, then captures 40 pulse widths in a FreeRTOS critical section, validates the checksum and converts tenths to Celsius and relative humidity. Invalid DHT data is shown as SENSOR ERROR and suppresses a false temperature alarm.")
+p("board.cpp initializes HSI/PLL at 64 MHz, GPIO, ADC1, I2C1, USART1 and two timers. TIM2/DWT timing supports the DHT22 transaction. SensorTask pulls its open-drain data pin low for 2 ms, then samples each data bit 40 us after its rising edge inside a FreeRTOS critical section. This midpoint separates the AM2302 zero pulse (26-28 us high) from its approximately 70 us one pulse. The task validates the checksum and converts tenths to Celsius and relative humidity. Invalid DHT data is shown as SENSOR ERROR and suppresses a false temperature alarm.")
 p("The LDR module's AO voltage decreases as simulated illumination increases. The firmware maps the 12-bit ADC code inversely into an approximate 0-100% relative brightness scale; it does not infer calibrated lux. The encoder's CLK falling edge is handled by EXTI1; its DT level determines direction. DisplayTask alone builds a 1 KB page buffer and writes it over I2C1 to the SSD1306. TIM4 channel 3 generates a 500 Hz, 50% duty cycle buzzer waveform.")
 
 section("5. Verification and Testing")
-p("PlatformIO Core 6.2.0 built the bluepill_f103c8 STM32Cube target successfully. The latest local build used 20,628 of 65,536 flash bytes and 12,056 of 20,480 static RAM bytes. Fifteen native Unity tests passed: five alarm threshold cases, four navigation cases, four state transition cases and two brightness endpoints. Those tests exercise pure decisions; they do not test HAL timing or Wokwi wiring.")
+p("The bluepill_f103c8 STM32Cube build succeeded using 21,616 of 65,536 flash bytes and 12,060 of 20,480 static RAM bytes. All 15 native Unity tests passed: five alarm threshold cases, four navigation cases, four state transition cases and two brightness endpoints. The configured cppcheck run passed with zero high and medium findings and 16 low style findings. These checks do not test HAL timing or wiring.")
 table(["Functional tests", "Evidence state"], [
-    ("FT-01 to FT-03: DHT/ADC display", "Pending interactive Wokwi observation"),
+    ("DHT22 acquisition", "Wokwi serial reads verified at 24 C / 40% and 32 C / 65%; revised 40 us midpoint decoder"),
+    ("FT-01 to FT-03: OLED sensor pages", "Temperature page showed 32.0 C and ACTIVE; requested 28 C, Humidity and Light pages pending"),
     ("FT-04 to FT-05: encoder navigation", "Pending interactive Wokwi observation"),
-    ("FT-06 to FT-07: buzzer thresholds", "Pending interactive Wokwi observation"),
-    ("FT-08 to FT-10: motion/inactivity", "Pending interactive Wokwi observation"),
+    ("FT-06 to FT-07: buzzer thresholds", "DHT 32 C reading observed; buzzer boundary behavior pending"),
+    ("FT-08 to FT-10: motion/inactivity", "INACTIVE observed; PIR trigger restored OLED; ACTIVE log and reactivation details pending"),
 ], [2.7*inch, 3.95*inch])
-p("The reproducible stimulus, expected output and actual-observation fields are in docs/verification.md. No Wokwi case has been marked PASS without observing it. The three deliberate experiments - removing blocking, raising a frequent task's priority, and bypassing the UART mutex - also remain pending and must be performed on a temporary branch, observed, and reverted.")
+p("LDR serial output changed from 76% (ADC 980 at 501 lux) to 97% (ADC 130 at 13,183 lux). The Temperature page showed 32.0 C and ACTIVE after a PIR trigger; other page values remain untested. The inactivity test logged State: INACTIVE and the OLED blanked. The original startup delay symptom was not repeated in the final reload run: sensor samples and MotionTask heartbeats continued. The full-circuit and OLED screenshots are in docs/evidence/. The reproducible stimulus and actual-observation fields are in docs/verification.md. FT-09 is the only end-to-end test currently marked PASS there; other cases remain pending where the expected display or buzzer behavior was not captured. The three deliberate scheduling/UART fault experiments remain pending.")
 
 section("6. Static Code Analysis")
-p("The first <b>pio check -e bluepill_f103c8</b> run passed with zero high, zero medium and seven low style messages. One local name shadowed a function and was renamed. A redundant display state assignment was removed. The latest rerun passed with zero high, zero medium and eight low messages after the Wokwi startup diagnostics were added. These C-style-cast reports point to expansion of STM32 HAL register or FreeRTOS macros at board.cpp, input.cpp and main.cpp call sites. They are in upstream macro definitions, not explicit casts in project source.")
+p("The latest <b>pio check</b> run passed with zero high, zero medium and 16 low style messages. These C-style-cast reports point to STM32 HAL register or FreeRTOS macro expansions at board.cpp, input.cpp and main.cpp call sites; no high or medium finding was reported.")
 table(["Finding", "Location / cause", "Resolution"], [
-    ("Shadowed name", "display.cpp:55; local index", "Renamed to offset"),
-    ("Redundant assignment", "display.cpp:134; screen flag", "Removed flag and assignment"),
-    ("C-style casts (8)", "HAL / FreeRTOS macro expansion", "Retained; third-party macro style"),
+    ("C-style casts (16)", "HAL / FreeRTOS macro expansion", "Retained; low-severity macro style"),
 ], [1.4*inch, 2.65*inch, 2.6*inch])
 
 section("7. Engineering Discussion")
 p("The STM32F103C8 has only 20 KB RAM. A one-kilobyte static OLED framebuffer, one-slot mailboxes and small task stacks keep static RAM below 60% in the measured build. A queue-per-consumer costs some RAM but avoids lost sensor updates. DHT pulse capture disables interrupts for roughly 4 ms, which can disturb precise task latency; timer input capture would be preferable for a production design. The alarm is muted in INACTIVE according to the stated ACTIVE behavior, but a safety-critical monitor could choose to keep it active instead.")
-p("The current evidence proves compilation, testable decision logic and static analysis only. Wokwi simulation timing, actual pin interactions and audible output require an interactive run. Physical deployment additionally needs voltage, pull-up, EMI, timing and thermal validation. Sensor calibration and fault-tolerant alarming are outside this laboratory prototype.")
+p("The evidence includes selected interactive Wokwi checks for DHT22 values, LDR response, the active Temperature display and inactivity in addition to build, unit tests and static analysis. Other OLED pages, full PIR reactivation logs and audible alarm behavior remain to be confirmed. Physical deployment additionally needs voltage, pull-up, EMI, timing and thermal validation. Sensor calibration and fault-tolerant alarming are outside this laboratory prototype.")
 
 section("8. Requirements Traceability")
 table(["Req.", "Implementation", "Verification"], [
-    ("FR-01", "SensorTask DHT temperature", "Unit alarm boundaries; FT-01 pending"),
-    ("FR-02", "SensorTask DHT humidity", "FT-02 pending"),
-    ("FR-03", "SensorTask ADC1 relative light", "Unit endpoints; FT-03 pending"),
+    ("FR-01", "SensorTask DHT temperature", "Wokwi serial values observed; OLED FT-01 pending"),
+    ("FR-02", "SensorTask DHT humidity", "Wokwi serial values observed; OLED FT-02 pending"),
+    ("FR-03", "SensorTask ADC1 relative light", "Wokwi ADC response observed; OLED FT-03 pending"),
     ("FR-04", "MotionTask PIR", "FT-08 and FT-10 pending"),
-    ("FR-05", "DisplayTask OLED", "FT-01 to FT-03 pending"),
+    ("FR-05", "DisplayTask OLED", "Temperature page observed at 32.0 C; requested 28 C/Humidity/Light pages pending"),
     ("FR-06", "InputTask encoder", "4 unit navigation cases; FT-04/05 pending"),
     ("FR-07", "AlarmTask PWM buzzer", "5 unit alarm cases; FT-06/07 pending"),
-    ("FR-08", "StateTask ACTIVE/INACTIVE", "4 unit state cases; FT-08/09 pending"),
-    ("FR-09", "StateTask 15 s timeout", "Unit timeout boundary; FT-09 pending"),
+    ("FR-08", "StateTask ACTIVE/INACTIVE", "Unit state cases; FT-09 observed, FT-08 pending"),
+    ("FR-09", "StateTask 15 s timeout", "Unit timeout and Wokwi INACTIVE observation; FT-09 pass"),
     ("FR-10", "StateTask PIR reactivation", "Unit reactivation; FT-10 pending"),
 ], [.55*inch, 2.45*inch, 3.65*inch])
 
 section("9. Conclusion")
-p("The project demonstrates a modular STM32Cube/FreeRTOS design with separate task responsibilities, intentional IPC, time-based state management and deterministic host tests. The remaining work is to run the Wokwi functional matrix and fault experiments, attach actual observations and circuit screenshots, and publish the verified results under the student's own accounts. The project should not be presented as fully simulator-verified until those steps are complete.")
+p("The project demonstrates a modular STM32Cube/FreeRTOS design with separate task responsibilities, intentional IPC, time-based state management and deterministic host tests. DHT22 acquisition, LDR response, the active Temperature display and the inactivity timeout were observed in Wokwi. Remaining work includes the other OLED pages, encoder directions, audible alarm response, complete PIR reactivation logs and the three fault experiments. This local report is not a claim that the entire circuit is simulator-verified.")
 
 section("References")
-p("BCA182 Laboratory Activity 1 (MSU-IIT, 2026); PlatformIO STM32Cube documentation; Wokwi STM32 Blue Pill documentation; FreeRTOS kernel source distributed in STM32CubeF1.")
+p("BCA182 Laboratory Activity 1 (MSU-IIT, 2026); Aosong AM2302 Technical Manual; PlatformIO STM32Cube documentation; Wokwi STM32 Blue Pill documentation; FreeRTOS kernel source distributed in STM32CubeF1.")
 
 
 def footer(canvas, doc):
@@ -150,8 +149,8 @@ def footer(canvas, doc):
 
 
 document = SimpleDocTemplate(str(OUT), pagesize=(8.5*inch, 11*inch),
-                             rightMargin=.75*inch, leftMargin=.75*inch,
-                             topMargin=.7*inch, bottomMargin=.7*inch,
+                             rightMargin=.72*inch, leftMargin=.72*inch,
+                             topMargin=.65*inch, bottomMargin=.65*inch,
                              title="BCA182 Laboratory Activity 1 Report",
                              author="Kent Alexis Alia")
 document.build(story, onFirstPage=footer, onLaterPages=footer)
