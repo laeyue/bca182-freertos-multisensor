@@ -1,55 +1,76 @@
-# Hackster.io draft: FreeRTOS STM32 Room Multisensor
+# Hackster.io project draft
 
-**Publication state:** Local draft only. Replace the repository link before publication. Both encoder directions and scheduling fault behavior were observed; the exact encoder page order and wrap, OLED ALARM legibility, and independent acoustic output remain unverified. The verification record lists these limits.
+**Publication state:** Draft prepared; not published.
+
+## Listing details
+
+- **Project name:** Real-Time FreeRTOS Room Multisensor
+- **Short description:** An STM32 Blue Pill room monitor built with six FreeRTOS tasks, a DHT22, LDR, PIR sensor, rotary encoder, SSD1306 OLED, and PWM buzzer.
+- **Repository:** https://github.com/laeyue/bca182-freertos-multisensor
+- **Course attribution:** BCA182, Mindanao State University - Iligan Institute of Technology (MSU-IIT)
+- **Collaborator field:** Add Prof. Paul Rodolf P. Castor using the matching Hackster profile, as required by the laboratory handout.
+- **Tags:** FreeRTOS, STM32, embedded, sensors, Wokwi, PlatformIO
+- **License:** Select the license for the Hackster project and add a matching repository `LICENSE` before publication. The repository does not currently declare one.
 
 ## Project Overview
 
-This project uses an STM32F103C8 Blue Pill with native FreeRTOS tasks to monitor simulated room temperature, humidity, relative brightness and motion. A rotary encoder navigates an SSD1306 OLED. A 500 Hz buzzer signals temperatures outside 18-30 C, and a 15-second inactivity timer blanks the display until PIR activity returns.
+This project monitors simulated room temperature, humidity, relative brightness, and motion with an STM32F103C8 Blue Pill. A KY-040 rotary encoder selects one of four pages on an SSD1306 OLED. A 500 Hz buzzer output indicates temperatures outside the 18-30 C range. After 15 seconds without motion, the display blanks; PIR activity restores the active display.
 
-## Motivation
+The project was built for BCA182 Laboratory Activity 1 to demonstrate FreeRTOS task scheduling, inter-task communication, periodic work, and state management on an STM32 target.
 
-A room monitor is a compact way to study task scheduling and communication. Each peripheral has a distinct timing and response need: a DHT22 sample arrives slowly, encoder input should feel immediate, and the display can update at lower priority.
+## Components and Tools
 
-## Components and Circuit
+- STM32F103C8 Blue Pill
+- DHT22 temperature and humidity sensor
+- Photoresistor module (LDR)
+- PIR motion sensor
+- KY-040 rotary encoder
+- SSD1306 I2C OLED
+- Piezo buzzer
+- PlatformIO, STM32Cube HAL, FreeRTOS, Unity, and Wokwi
 
-The Wokwi circuit contains a Blue Pill, DHT22, LDR module, PIR, KY-040 encoder, SSD1306 OLED and buzzer. The full wiring is in `diagram.json` and the pin table in the README. Local screenshots document the full circuit and Temperature, Humidity, Light and Motion OLED pages. They remain in the repository as verification evidence.
+The full circuit and pin assignment are in the public repository. The circuit uses PB12 for DHT22 data with a 5.1 kOhm pull-up, PA0 for LDR analog output, PB13 for PIR output, PA1/PA2 for encoder CLK/DT, PB6/PB7 for I2C1 OLED, PB8 for TIM4 buzzer PWM, and PA9 for USART1 logging.
 
-![Wokwi full circuit](evidence/wokwi-full-circuit.png)
-
-![OLED Temperature page at 27.8 C](evidence/wokwi-oled-28c-temperature.png)
-
-![OLED Humidity page at 65 percent](evidence/wokwi-oled-humidity.png)
-
-![OLED Light page](evidence/wokwi-oled-light.png)
-
-![OLED Motion page](evidence/wokwi-oled-motion.png)
+![Wokwi circuit](https://raw.githubusercontent.com/laeyue/bca182-freertos-multisensor/main/docs/evidence/wokwi-full-circuit.png)
 
 ## FreeRTOS Architecture
 
-Six tasks separate sensor sampling, encoder handling, PIR monitoring, state transitions, alarm control and OLED rendering. The sensor sends independent newest-value messages to display and alarm queues. The state task owns the ACTIVE bit in an event group; the alarm task owns the ALARM bit. A mutex serializes diagnostic writes over USART1. A 2-second `vTaskDelayUntil()` schedule keeps sensor sampling anchored to fixed wake times.
+Six tasks divide the work: MotionTask reads PIR state, InputTask handles encoder steps, StateTask owns ACTIVE/INACTIVE state, SensorTask samples DHT22 and LDR, AlarmTask controls the buzzer, and DisplayTask owns the OLED. SensorTask writes the newest sensor data to separate one-item queues for DisplayTask and AlarmTask. The state and alarm event bits live in an event group. A mutex serializes USART1 messages.
+
+The sensor task uses `vTaskDelayUntil()` with a two-second period. The 15-second inactivity timeout is handled by StateTask. Each task blocks on a queue, event, or timed delay between work.
 
 ## How It Works
 
-The DHT22 decoder samples each high pulse 40 us after its rising edge, between the 26-28 us zero pulse and approximately 70 us one pulse, then checks the five-byte checksum. In VS Code Wokwi, repeated checksum-valid readings were observed at 24 C / 40% and 32 C / 65%. ADC1 reads the photoresistor module; its output is shown as relative brightness, not calibrated lux. An EXTI interrupt records encoder steps for InputTask. The OLED has a single owner, DisplayTask. TIM4 channel 3 supplies a square wave for the piezo buzzer.
+The DHT22 driver releases PB12 into input-pull-up mode and samples each data bit 40 microseconds after its rising edge. This timing separates the sensor's short zero pulse from its longer one pulse. The driver validates the five-byte checksum before publishing a reading. The LDR module is reported as relative brightness, not calibrated lux. Encoder direction is decoded from CLK and DT transitions. DisplayTask renders one selected page. TIM4 channel 3 generates the buzzer waveform at about 500 Hz.
+
+![Temperature page](https://raw.githubusercontent.com/laeyue/bca182-freertos-multisensor/main/docs/evidence/wokwi-oled-28c-temperature.png)
+
+![Humidity page](https://raw.githubusercontent.com/laeyue/bca182-freertos-multisensor/main/docs/evidence/wokwi-oled-humidity.png)
+
+![Light page](https://raw.githubusercontent.com/laeyue/bca182-freertos-multisensor/main/docs/evidence/wokwi-oled-light.png)
+
+![Motion page](https://raw.githubusercontent.com/laeyue/bca182-freertos-multisensor/main/docs/evidence/wokwi-oled-motion.png)
 
 ## Testing and Verification
 
-The STM32Cube target builds in PlatformIO. Fifteen Unity tests pass for alarm boundaries, navigation, state changes and brightness conversion. `pio check` reports no high or medium findings and 16 low C-style cast findings at STM32 HAL or FreeRTOS macro call sites. Wokwi confirmed DHT22 serial readings, LDR response, all four OLED pages, PIR `ACTIVE`/`INACTIVE` transitions, and the inactivity timeout. With PIR active, clockwise and reverse encoder actions produced both CLK/DT quadrature traces and `Input: display page changed` logs. The full ordered page-wrap sequence is not captured. A PB8 analyzer trace measured approximately 500 Hz PWM at 32 C, and another trace showed the buzzer output low after a normal-temperature sample. The OLED ALARM indicator and acoustic output were not independently confirmed. Temporary no-delay and high-priority MotionTask variants suppressed sensor output; bypassing the UART mutex did not produce visible interleaving in the short capture.
+The firmware builds for `bluepill_f103c8`. All 15 native Unity tests pass for alarm thresholds, page navigation logic, activity-state transitions, and brightness conversion. PlatformIO static analysis reported zero high and zero medium findings, with 16 low C-style-cast findings at STM32 HAL or FreeRTOS macro call sites.
 
-The supporting [verification record](verification.md) includes the VCD traces and simulator screenshots. The traces demonstrate output-pin behavior; Wokwi does not replace electrical or acoustic measurements on a physical device.
+Live VS Code Wokwi runs showed checksum-valid DHT22 readings, changing LDR output, all four OLED pages, PIR ACTIVE/INACTIVE transitions, and page-change logs for both encoder directions. A follow-up live run reached `Sensor: DHT start delay finished`, a valid `24.0 C, 40.0 %` sample, light ADC output, and recurring MotionTask heartbeats, confirming that the scheduler wakeup path progressed past the original stall symptom.
+
+Some acceptance cases remain partial. The complete clockwise and counterclockwise OLED page order with wraparound was not captured in one run. At 32 C, a PB8 analyzer trace measured about 500 Hz at 50% duty cycle, and a recovery trace showed PB8 low after a normal-temperature sample. A legible OLED ALARM view and independent acoustic measurement were not captured. The firmware output waveform is verified; sound and the alarm screen are not claimed as verified.
+
+Reversible fault experiments showed that removing MotionTask's blocking delay or raising its priority suppressed sensor output during the observed runs. Bypassing the UART mutex did not reproduce visible line interleaving in the short capture. These are observations from the simulator; they do not replace testing with physical hardware.
+
+The full [functional verification record](https://github.com/laeyue/bca182-freertos-multisensor/blob/main/docs/verification.md) links the screenshots and VCD traces and lists these limits. The public [source repository](https://github.com/laeyue/bca182-freertos-multisensor) includes the circuit, firmware, report, and evidence.
 
 ## Challenges and Lessons Learned
 
-One queue with two destructive consumers would split sensor updates, so separate one-slot mailboxes were used. The DHT22 requires microsecond timing, and the current bit-banged critical section trades interrupt latency for implementation simplicity. Using a timer PWM output matters because a steady high level does not create a piezo tone.
+A single sensor queue with two consumers would split updates between the display and alarm tasks, so the firmware uses separate one-item mailboxes. The DHT22 needs microsecond timing, and the bit-banged critical section trades interrupt latency for a simpler driver. A steady GPIO level cannot drive a piezo tone; the buzzer needs timer PWM.
 
 ## Limitations and Future Improvements
 
-The local Wokwi run covers DHT22 decoding, LDR response, OLED page rendering and inactivity, but not every encoder, PIR-log or buzzer test. A timer input capture for DHT pulses, sensor fault alert, calibrated light conversion and measured task latency would strengthen a hardware version.
-
-## Source Code
-
-[Insert public GitHub repository URL here after publication.]
+The exact ordered encoder wrap sequence and the OLED ALARM indication still need a captured Wokwi run. A separate acoustic check was not available in the current verification evidence. The design has not been validated on a physical board. Future work could add timer input capture for DHT pulses, calibrated light measurements, measured task latency, and a sensor fault alarm.
 
 ## References
 
-PlatformIO STM32Cube documentation; Wokwi Blue Pill and component documentation; FreeRTOS kernel included with STM32CubeF1; BCA182 Laboratory Activity 1 (MSU-IIT, September 2026).
+BCA182 Laboratory Activity 1 (MSU-IIT, 2026); Aosong AM2302 Technical Manual; STM32CubeF1 documentation and FreeRTOS kernel; PlatformIO STM32Cube documentation; Wokwi component documentation.

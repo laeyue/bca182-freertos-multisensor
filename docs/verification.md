@@ -15,6 +15,16 @@ then produced repeated wakeups. The latest clean image also showed continued
 sampling after reload. The startup symptom is considered cleared in the
 observed reload run, though restart behavior should be monitored in later runs.
 
+On 2026-09-30, a follow-up live run in VS Code Wokwi again progressed beyond
+the earlier stall. The visible serial output included `Sensor: sampling DHT22`,
+`Sensor: DHT start delay finished`, `Sensor: DHT22 read complete`,
+`Sensor: 24.0 C, 40.0 %`, `Sensor: light 76 % ADC 1001`, and recurring
+`Motion: heartbeat PIR low` messages. This confirms task wakeups and the DHT22
+and LDR serial paths in that run. The live observation was not saved as a new
+image; the earlier retained production-run screenshot remains linked below.
+The encoder page wrap and alarm display/audio cases remain separate partial
+checks.
+
 ### Static ELF audit
 
 The production ELF places the vector table at `0x08000000`. Its SVC, PendSV,

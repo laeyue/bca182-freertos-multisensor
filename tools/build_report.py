@@ -61,7 +61,7 @@ def table(headers, rows, widths):
 
 p("BCA182 Laboratory Activity 1", "TitleCustom")
 p("Real-Time Multisensor Room Monitoring System", "CenteredCustom")
-p("Name: Kent Alexis Alia&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Section: B182&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Date: 9/29/26")
+p("Name: Kent Alexis Alia&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Section: B182&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Date: 9/30/26")
 p("Status: firmware build, 15 native tests, and static analysis passed. Wokwi verified DHT22 and LDR readings, all four OLED pages, PIR activity/inactivity, encoder input handling, and buzzer PWM start and recovery. The full encoder wrap sequence, a legible OLED ALARM indicator, and an independent acoustic measurement remain incomplete. Two reversible scheduling faults starved sensor output; the UART mutex-bypass trial did not reproduce interleaving.")
 
 section("1. Problem and Requirements")
@@ -107,7 +107,7 @@ table(["Functional tests", "Evidence state"], [
     ("FT-08 to FT-10: motion/inactivity", "PASS: PIR high produced Motion: detected and State: ACTIVE; the earlier timeout run showed State: INACTIVE and a blank OLED"),
     ("Fault experiments", "No delay and high-priority MotionTask variants suppressed sensor output; bypassing the UART mutex did not produce visible interleaving in the short run"),
 ], [2.7*inch, 3.95*inch])
-p("Separate OLED screenshots show all four pages; LDR output changed from 76% at 501 lux to 97% at 13,183 lux. Checksum-valid DHT samples ranged from 24 C to 45.8 C. At 32 C, the PB8 VCD shows 4,096 transitions at about 500 Hz; after a valid 23.5 C sample it stayed low. PIR activation logged ACTIVE, and a separate timeout test logged INACTIVE with the OLED blank. Both encoder directions and page-change logs were observed, but the ordered wrap was not captured. A clean production reload again showed sensor samples and MotionTask heartbeats. No-delay and high-priority faults suppressed sensor output; the UART mutex-bypass test showed no visible interleaving. Evidence is in docs/evidence/.")
+p("Separate OLED screenshots show all four pages; LDR output changed from 76% at 501 lux to 97% at 13,183 lux. Checksum-valid DHT samples ranged from 24 C to 45.8 C. At 32 C, the PB8 VCD shows 4,096 transitions at about 500 Hz; after a valid 23.5 C sample it stayed low. PIR activation logged ACTIVE, and a separate timeout test logged INACTIVE with the OLED blank. Both encoder directions and page-change logs were observed, but the ordered wrap was not captured. A live VS Code Wokwi follow-up on 2026-09-30 showed the DHT start delay finish, a valid 24 C / 40% sample, light ADC output, and recurring MotionTask heartbeats. No new screenshot was retained for that follow-up. No-delay and high-priority faults suppressed sensor output; the UART mutex-bypass test showed no visible interleaving. Retained evidence is in docs/evidence/.")
 
 section("6. Static Code Analysis")
 p("The latest <b>pio check</b> run passed with zero high, zero medium and 16 low style messages. These C-style-cast reports point to STM32 HAL register or FreeRTOS macro expansions at board.cpp, input.cpp and main.cpp call sites; no high or medium finding was reported.")
