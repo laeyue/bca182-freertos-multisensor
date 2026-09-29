@@ -387,6 +387,76 @@ void vPortExitCritical( void )
 }
 /*-----------------------------------------------------------*/
 
+/*
+ * Wokwi's Cortex-M3 model can stack the PC at the STR that writes PENDSVSET,
+ * rather than at the instruction after it. On restore, that repeats the yield.
+ * A real Cortex-M stacks the following PC, so this only adjusts the emulator's
+ * current-instruction case.
+ */
+void vPortFixStackedPcAfterPendSVSet( StackType_t *pxSavedStack ) __attribute__((used, noinline));
+void vPortFixStackedPcAfterPendSVSet( StackType_t *pxSavedStack )
+{
+	uint32_t *pulExceptionFrame = ( uint32_t * ) ( pxSavedStack + 8 );
+	uint32_t ulRegisters[ 16 ] = { 0U };
+	uint32_t ulProgramCounter = pulExceptionFrame[ 6 ];
+	uint32_t ulInstructionBytes = 0U;
+	uint16_t usFirstHalfword;
+
+	ulRegisters[ 0 ] = pulExceptionFrame[ 0 ];
+	ulRegisters[ 1 ] = pulExceptionFrame[ 1 ];
+	ulRegisters[ 2 ] = pulExceptionFrame[ 2 ];
+	ulRegisters[ 3 ] = pulExceptionFrame[ 3 ];
+	ulRegisters[ 12 ] = pulExceptionFrame[ 4 ];
+	ulRegisters[ 13 ] = ( uint32_t ) ( uintptr_t ) ( pulExceptionFrame + 8 );
+	ulRegisters[ 14 ] = pulExceptionFrame[ 5 ];
+	ulRegisters[ 15 ] = ulProgramCounter;
+	for( uint32_t ulRegister = 4U; ulRegister <= 11U; ulRegister++ )
+	{
+		ulRegisters[ ulRegister ] = pxSavedStack[ ulRegister - 4U ];
+	}
+
+	/* The application and its FreeRTOS port execute from the Blue Pill flash. */
+	if( ( ulProgramCounter < 0x08000000UL ) || ( ulProgramCounter >= 0x08010000UL ) )
+	{
+		return;
+	}
+
+	const volatile uint16_t *pusInstruction =
+		( const volatile uint16_t * ) ( uintptr_t ) ulProgramCounter;
+	usFirstHalfword = pusInstruction[ 0 ];
+	if( ( usFirstHalfword & 0xF800U ) == 0x6000U )
+	{
+		/* Thumb STR (immediate), T1: 01100 imm5 Rn Rt. */
+		const uint32_t ulTarget = usFirstHalfword & 0x7U;
+		const uint32_t ulBase = ( usFirstHalfword >> 3 ) & 0x7U;
+		const uint32_t ulOffset = ( ( usFirstHalfword >> 6 ) & 0x1FU ) * sizeof( uint32_t );
+		if( ( ulRegisters[ ulBase ] + ulOffset ) == 0xE000ED04UL &&
+			( ulRegisters[ ulTarget ] == 0x10000000UL ) )
+		{
+			ulInstructionBytes = 2U;
+		}
+	}
+	else if( ( usFirstHalfword & 0xFFF0U ) == 0xF8C0U )
+	{
+		/* Thumb STR.W (immediate), T3: F8Cn Rt:imm12. */
+		const uint16_t usSecondHalfword = pusInstruction[ 1 ];
+		const uint32_t ulBase = usFirstHalfword & 0xFU;
+		const uint32_t ulTarget = ( usSecondHalfword >> 12 ) & 0xFU;
+		const uint32_t ulOffset = usSecondHalfword & 0x0FFFU;
+		if( ( ulRegisters[ ulBase ] + ulOffset ) == 0xE000ED04UL &&
+			( ulRegisters[ ulTarget ] == 0x10000000UL ) )
+		{
+			ulInstructionBytes = 4U;
+		}
+	}
+
+	if( ulInstructionBytes != 0U )
+	{
+		pulExceptionFrame[ 6 ] = ulProgramCounter + ulInstructionBytes;
+	}
+}
+/*-----------------------------------------------------------*/
+
 void xPortPendSVHandler( void )
 {
 	/* This is a naked function. */
@@ -405,6 +475,9 @@ void xPortPendSVHandler( void )
 	"	stmdb sp!, {r3, r14}				\n"
 	"	mov r0, %0							\n"
 	"	msr basepri, r0						\n"
+	"	ldr r1, [r3]\n"
+	"	ldr r0, [r1]\n"
+	"	bl vPortFixStackedPcAfterPendSVSet\n"
 	"	bl vTaskSwitchContext				\n"
 	"	mov r0, #0							\n"
 	"	msr basepri, r0						\n"
