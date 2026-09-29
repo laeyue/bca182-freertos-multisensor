@@ -50,16 +50,16 @@ The timing is based on the [Aosong AM2302 technical manual](https://www.aosong.c
 
 | ID | Stimulus | Expected result | Actual observation | Result |
 | --- | --- | --- | --- | --- |
-| FT-01 | Set DHT22 to 28 C, select Temperature | OLED shows about 28.0 C within 2 s | Temperature page showed 32.0 C and ACTIVE on the OLED; serial reads at 24 C and 32 C were valid, but the requested 28 C OLED value was not tested | Pending |
-| FT-02 | Set DHT22 to 65%, select Humidity | OLED shows about 65.0% within 2 s | Serial output verified 65.0% at 32 C; Humidity OLED page was not observed | Pending |
-| FT-03 | Change LDR lux control, select Light | Relative brightness percentage changes | LDR output changed from 76% (ADC 980 at 501 lux) to 97% (ADC 130 at 13,183 lux); Light OLED page was not observed | Pending |
-| FT-04 | Rotate encoder clockwise | Temperature -> Humidity -> Light -> Motion -> Temperature | Not observed | Pending |
-| FT-05 | Rotate encoder counterclockwise | Reverse sequence with wraparound | Not observed | Pending |
-| FT-06 | Set DHT22 above 30 C | Buzzer sounds, OLED alarm indicator appears | DHT read returned 32.0 C; alarm output and audible buzzer were not confirmed | Pending |
-| FT-07 | Return DHT22 to 24 C | Buzzer stops within next sensor sample | Not observed | Pending |
-| FT-08 | Trigger PIR | State log shows ACTIVE and OLED on | Wokwi Simulate motion restored the OLED Temperature page with ACTIVE visible; matching ACTIVE serial log was not captured | Pending |
+| FT-01 | Set DHT22 to 28 C, select Temperature | OLED shows about 28.0 C within 2 s | DHT control was set to 27.8 C; the Temperature page showed 27.8 C and ACTIVE | PASS |
+| FT-02 | Set DHT22 to 65%, select Humidity | OLED shows about 65.0% within 2 s | Humidity page showed 65.0% and ACTIVE; serial output also reported 65.0% | PASS |
+| FT-03 | Change LDR lux control, select Light | Relative brightness percentage changes | Light page rendered 97%; serial output changed from 76% (ADC 980 at 501 lux) to 97% (ADC 130 at 13,183 lux) | PASS |
+| FT-04 | Rotate encoder clockwise | Temperature -> Humidity -> Light -> Motion -> Temperature | Wokwi keyboard rotation changed the OLED across Temperature, Humidity, Light and Motion pages; exact ordered sequence and wrap step were not captured in one run | Partial |
+| FT-05 | Rotate encoder counterclockwise | Reverse sequence with wraparound | Not captured reliably | Pending |
+| FT-06 | Set DHT22 above 30 C | Buzzer sounds, OLED alarm indicator appears | DHT control and checksum-valid serial sample showed 45.8 C / 65.0%; the ALARM indicator and audible buzzer were not confirmed | Partial |
+| FT-07 | Return DHT22 to 24 C | Buzzer stops within next sensor sample | Alarm-on state was not confirmed, so buzzer recovery was not tested | Pending |
+| FT-08 | Trigger PIR | State log shows ACTIVE and OLED on | Wokwi motion control restored an ACTIVE OLED page in an earlier run; matching `State: ACTIVE` serial evidence was not captured | Partial |
 | FT-09 | Wait 15 s after PIR output returns low | State log shows INACTIVE and OLED blanks | `State: INACTIVE` was observed after inactivity, with the OLED blank | PASS |
-| FT-10 | Trigger PIR while INACTIVE | OLED restores and state log shows ACTIVE | OLED appeared to restore after the Wokwi PIR control; matching ACTIVE log was not captured | Pending |
+| FT-10 | Trigger PIR while INACTIVE | OLED restores and state log shows ACTIVE | OLED reactivation was observed; matching `State: ACTIVE` serial evidence was not captured | Partial |
 
 ## Deliberate FreeRTOS fault experiments
 
@@ -73,7 +73,7 @@ These experiments should be performed in a temporary branch or with reversible e
 
 ## Evidence to capture
 
-1. [Wokwi full-circuit screenshot](evidence/wokwi-full-circuit.png) and [active OLED Temperature screenshot](evidence/wokwi-oled-active.png); Humidity, Light and Motion pages still need screenshots.
-2. Serial log showing sensor updates and ACTIVE/INACTIVE transition.
-3. Short note about whether buzzer sound is audible at alarm boundaries.
+1. [Wokwi full-circuit screenshot](evidence/wokwi-full-circuit.png), [Temperature page](evidence/wokwi-oled-28c-temperature.png), [Humidity page](evidence/wokwi-oled-humidity.png), [Light page](evidence/wokwi-oled-light.png), and [Motion page](evidence/wokwi-oled-motion.png).
+2. Live Wokwi serial output showed repeated DHT22 samples, LDR readings, and MotionTask heartbeats while PIR was low. `State: INACTIVE` was captured; a matching PIR-triggered `State: ACTIVE` line remains outstanding.
+3. The 45.8 C / 65.0% sample confirms high-temperature acquisition. The corresponding OLED ALARM state and audible buzzer response remain unverified.
 4. Before/after scheduling observations for each deliberate fault experiment.

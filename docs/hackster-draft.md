@@ -12,11 +12,17 @@ A room monitor is a compact way to study task scheduling and communication. Each
 
 ## Components and Circuit
 
-The Wokwi circuit contains a Blue Pill, DHT22, LDR module, PIR, KY-040 encoder, SSD1306 OLED and buzzer. The full wiring is in `diagram.json` and the pin table in the README. The current local screenshots show the full circuit and the active Temperature page; the other display pages remain to be captured.
+The Wokwi circuit contains a Blue Pill, DHT22, LDR module, PIR, KY-040 encoder, SSD1306 OLED and buzzer. The full wiring is in `diagram.json` and the pin table in the README. Local screenshots document the full circuit and Temperature, Humidity, Light and Motion OLED pages. They remain in the repository as verification evidence.
 
 ![Wokwi full circuit](evidence/wokwi-full-circuit.png)
 
-![OLED Temperature page while active](evidence/wokwi-oled-active.png)
+![OLED Temperature page at 27.8 C](evidence/wokwi-oled-28c-temperature.png)
+
+![OLED Humidity page at 65 percent](evidence/wokwi-oled-humidity.png)
+
+![OLED Light page](evidence/wokwi-oled-light.png)
+
+![OLED Motion page](evidence/wokwi-oled-motion.png)
 
 ## FreeRTOS Architecture
 
@@ -28,7 +34,7 @@ The DHT22 decoder samples each high pulse 40 us after its rising edge, between t
 
 ## Testing and Verification
 
-The STM32Cube target builds in PlatformIO. Fifteen Unity tests pass for alarm boundaries, navigation, state changes and brightness conversion. `pio check` reports no high or medium findings and 16 low style findings, all C-style cast reports from STM32 HAL or FreeRTOS macro expansion. Wokwi also confirmed the changed LDR reading and the inactive timeout. The verification record lists the remaining OLED, encoder, alarm and PIR cases as pending; the three deliberate fault experiments have not been run.
+The STM32Cube target builds in PlatformIO. Fifteen Unity tests pass for alarm boundaries, navigation, state changes and brightness conversion. `pio check` reports no high or medium findings and 16 low style findings, all C-style cast reports from STM32 HAL or FreeRTOS macro expansion. Wokwi confirmed DHT22 serial readings, LDR response, all four OLED pages and the inactive timeout. Encoder page changes were observed, though exact direction and wraparound evidence is incomplete. PIR reactivation appeared on the OLED, but its ACTIVE serial transition was not captured. The temperature alarm and audible buzzer response remain unverified. The three deliberate fault experiments have not been run.
 
 ## Challenges and Lessons Learned
 
@@ -36,7 +42,7 @@ One queue with two destructive consumers would split sensor updates, so separate
 
 ## Limitations and Future Improvements
 
-The local Wokwi run covers DHT22 decoding, LDR response and inactivity, but not every end-to-end display or buzzer test. A timer input capture for DHT pulses, sensor fault alert, calibrated light conversion and measured task latency would strengthen a hardware version.
+The local Wokwi run covers DHT22 decoding, LDR response, OLED page rendering and inactivity, but not every encoder, PIR-log or buzzer test. A timer input capture for DHT pulses, sensor fault alert, calibrated light conversion and measured task latency would strengthen a hardware version.
 
 ## Source Code
 

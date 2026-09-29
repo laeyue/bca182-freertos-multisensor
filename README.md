@@ -4,7 +4,7 @@
 
 A simulated STM32F103C8 Blue Pill monitors temperature, relative humidity, ambient brightness, and PIR motion. A rotary encoder selects one measurement on an SSD1306 OLED. A 500 Hz PWM buzzer sounds outside the inclusive 18-30 C temperature range. After 15 seconds without PIR activity, the OLED blanks; new motion restores it. The firmware uses STM32Cube HAL and native FreeRTOS APIs, with no Arduino framework or libraries.
 
-The Blue Pill firmware builds and all 15 host logic tests pass. In the latest VS Code Wokwi run, the DHT22 returned checksum-valid readings at 24 C / 40% and 32 C / 65%; the LDR output changed with its lux control, and the inactivity transition was observed. The OLED page controls, buzzer response, and some PIR transitions still need complete interactive evidence. See [the verification record](docs/verification.md) for observed results and remaining cases.
+The Blue Pill firmware builds and all 15 host logic tests pass. In VS Code Wokwi, checksum-valid DHT22 readings were observed, the LDR responded to its lux control, all four OLED pages rendered, and the 15-second inactivity transition occurred. Encoder page changes were observed, but the full direction-and-wrap sequence is not fully captured. PIR reactivation appeared on the OLED without a matching ACTIVE serial line. The temperature alarm and audible buzzer response remain unverified. See [the verification record](docs/verification.md) for the evidence and remaining cases.
 
 ## Features
 
@@ -116,7 +116,7 @@ Install PlatformIO Core or the VS Code PlatformIO extension, then install Wokwi 
 pio run -e bluepill_f103c8
 ```
 
-The generated firmware is `.pio/build/bluepill_f103c8/firmware.bin`. Tested with PlatformIO Core 6.2.0 and ST STM32 platform 20.0.0. The final local build used 20,320 B flash and 12,056 B static RAM; rerun the command for current totals.
+The generated firmware is `.pio/build/bluepill_f103c8/firmware.bin`. Tested with PlatformIO Core 6.2.0 and ST STM32 platform 20.0.0. The latest production build used 21,616 B flash and 12,060 B static RAM; rerun the command for current totals.
 
 ## Running the Wokwi Simulation
 
@@ -140,13 +140,19 @@ The latest run reports 16 low-severity C-style-cast findings and no medium or hi
 
 ## Functional Verification
 
-[The verification record](docs/verification.md) lists FT-01 through FT-10 with stimuli, expected outcomes and actual observations. It distinguishes serial-level sensor confirmation from OLED or buzzer behavior that has not yet been captured. No test is marked PASS based only on compilation.
+[The verification record](docs/verification.md) lists FT-01 through FT-10 with stimuli, expected outcomes and actual observations. FT-01 through FT-03 passed with OLED screenshots; motion timeout passed. Partial results and pending buzzer, encoder-wrap and PIR-log evidence remain explicit. No test is marked PASS based only on compilation.
 
 ### Wokwi evidence
 
 ![Full Wokwi circuit](docs/evidence/wokwi-full-circuit.png)
 
-![Active OLED Temperature page](docs/evidence/wokwi-oled-active.png)
+![OLED Temperature page at 27.8 C](docs/evidence/wokwi-oled-28c-temperature.png)
+
+![OLED Humidity page at 65 percent](docs/evidence/wokwi-oled-humidity.png)
+
+![OLED Light page](docs/evidence/wokwi-oled-light.png)
+
+![OLED Motion page](docs/evidence/wokwi-oled-motion.png)
 
 ## Engineering Decisions
 
@@ -158,7 +164,7 @@ The latest run reports 16 low-severity C-style-cast findings and no medium or hi
 
 ## Limitations
 
-Interactive Wokwi checks cover DHT22 decoding at two settings, LDR response, task wakeups and the inactive timeout. Encoder page changes, complete PIR reactivation evidence, OLED values and alarm/buzzer behavior remain unverified. DHT22 sampling masks interrupts for several milliseconds. The inactivity timeout measures from the last observed PIR-high sample; the PIR simulator holds output high for about five seconds. No environmental sensor calibration is attempted. DHT errors suppress the alarm rather than sounding a fault tone. Wokwi circuitry does not establish electrical suitability for physical hardware.
+Interactive Wokwi checks cover DHT22 decoding through a 45.8 C input, LDR response, all four OLED pages, task wakeups and the inactive timeout. Exact encoder direction and wraparound, the PIR ACTIVE serial line, and alarm/buzzer behavior remain unverified. The high-temperature reading was confirmed, but its OLED alarm indicator and buzzer response were not. DHT22 sampling masks interrupts for several milliseconds. The inactivity timeout measures from the last observed PIR-high sample; the PIR simulator holds output high for about five seconds. No environmental sensor calibration is attempted. DHT errors suppress the alarm rather than sounding a fault tone. Wokwi circuitry does not establish electrical suitability for physical hardware.
 
 ## Future Improvements
 
