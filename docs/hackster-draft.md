@@ -8,9 +8,22 @@
 - **Short description:** An STM32 Blue Pill room monitor built with six FreeRTOS tasks, a DHT22, LDR, PIR sensor, rotary encoder, SSD1306 OLED, and PWM buzzer.
 - **Repository:** https://github.com/laeyue/bca182-freertos-multisensor
 - **Course attribution:** BCA182, Mindanao State University - Iligan Institute of Technology (MSU-IIT)
-- **Collaborator field:** Add Prof. Paul Rodolf P. Castor using the matching Hackster profile, as required by the laboratory handout.
+- **Team / collaborator field:** Add Prof. Paul Rodolf P. Castor using the matching Hackster profile, as required by the laboratory handout.
 - **Tags:** FreeRTOS, STM32, embedded, sensors, Wokwi, PlatformIO
-- **License:** Select the license for the Hackster project and add a matching repository `LICENSE` before publication. The repository does not currently declare one.
+- **License:** The repository does not currently declare a license. Hackster permits publishing without an open-source license; if one is selected, add a matching `LICENSE` file to the repository first.
+
+## Hackster Builder Checklist
+
+The article text below is prepared, but this file is not a Hackster project page. Before publishing, complete the corresponding builder fields and wait until Hackster reports the project as 100% complete:
+
+- Choose a crisp, high-resolution cover image of the finished project. The current simulator and circuit screenshots are evidence images, not a polished cover image.
+- Select an accurate difficulty and build time.
+- Choose up to three project categories.
+- Add the hardware below to Hackster's **Things** list, selecting the matching platform and component entries. Keep software tools in the tools section.
+- Add Prof. Paul Rodolf P. Castor as a team member / collaborator using the matching Hackster profile.
+- Review the story preview, links, image quality, and publication settings.
+
+The license is optional on Hackster. Decide whether to license the source before publication; do not select a license that does not match the repository.
 
 ## Project Overview
 
@@ -20,14 +33,18 @@ The project was built for BCA182 Laboratory Activity 1 to demonstrate FreeRTOS t
 
 ## Components and Tools
 
-- STM32F103C8 Blue Pill
-- DHT22 temperature and humidity sensor
-- Photoresistor module (LDR)
-- PIR motion sensor
-- KY-040 rotary encoder
-- SSD1306 I2C OLED
-- Piezo buzzer
-- PlatformIO, STM32Cube HAL, FreeRTOS, Unity, and Wokwi
+| Hardware component | Quantity | Use |
+| --- | ---: | --- |
+| STM32F103C8 Blue Pill | 1 | Main controller |
+| DHT22 temperature and humidity sensor | 1 | Temperature and humidity input |
+| 5.1 kOhm resistor | 1 | DHT22 data pull-up |
+| Photoresistor module (LDR) | 1 | Relative light input |
+| PIR motion sensor | 1 | Motion input |
+| KY-040 rotary encoder | 1 | Display-page selection |
+| SSD1306 I2C OLED | 1 | Measurement and state display |
+| Piezo buzzer | 1 | Temperature alarm output |
+
+**Software and tools:** PlatformIO, STM32Cube HAL, FreeRTOS, Unity, and Wokwi.
 
 The full circuit and pin assignment are in the public repository. The circuit uses PB12 for DHT22 data with a 5.1 kOhm pull-up, PA0 for LDR analog output, PB13 for PIR output, PA1/PA2 for encoder CLK/DT, PB6/PB7 for I2C1 OLED, PB8 for TIM4 buzzer PWM, and PA9 for USART1 logging.
 
@@ -50,6 +67,15 @@ The DHT22 driver releases PB12 into input-pull-up mode and samples each data bit
 ![Light page](https://raw.githubusercontent.com/laeyue/bca182-freertos-multisensor/main/docs/evidence/wokwi-oled-light.png)
 
 ![Motion page](https://raw.githubusercontent.com/laeyue/bca182-freertos-multisensor/main/docs/evidence/wokwi-oled-motion.png)
+
+## Reproducing the Wokwi Demonstration
+
+1. Clone the [GitHub repository](https://github.com/laeyue/bca182-freertos-multisensor) and open it in VS Code with PlatformIO and Wokwi for VS Code installed.
+2. Build the STM32 target with `pio run -e bluepill_f103c8`.
+3. Start **Wokwi: Start Simulator**. The circuit is defined in `diagram.json` and the firmware paths are in `wokwi.toml`.
+4. Change the DHT22 and photoresistor controls, rotate the encoder in both directions, and trigger the PIR. The [verification record](https://github.com/laeyue/bca182-freertos-multisensor/blob/main/docs/verification.md) lists the observed results and evidence for each functional test.
+
+The Wokwi simulation is the verified target for this project. A physical STM32 board and independent buzzer sound-level measurement were not tested.
 
 ## Testing and Verification
 
