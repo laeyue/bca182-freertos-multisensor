@@ -1,6 +1,6 @@
 # Hackster.io draft: FreeRTOS STM32 Room Multisensor
 
-**Publication state:** Local draft only. The full Wokwi functional matrix and deliberate fault experiments are not complete. Replace the repository link and author details with the student's own information before any publication.
+**Publication state:** Local draft only. Replace the repository link before publication. Both encoder directions and scheduling fault behavior were observed; the exact encoder page order and wrap, OLED ALARM legibility, and independent acoustic output remain unverified. The verification record lists these limits.
 
 ## Project Overview
 
@@ -34,7 +34,9 @@ The DHT22 decoder samples each high pulse 40 us after its rising edge, between t
 
 ## Testing and Verification
 
-The STM32Cube target builds in PlatformIO. Fifteen Unity tests pass for alarm boundaries, navigation, state changes and brightness conversion. `pio check` reports no high or medium findings and 16 low style findings, all C-style cast reports from STM32 HAL or FreeRTOS macro expansion. Wokwi confirmed DHT22 serial readings, LDR response, all four OLED pages and the inactive timeout. Encoder page changes were observed, though exact direction and wraparound evidence is incomplete. PIR reactivation appeared on the OLED, but its ACTIVE serial transition was not captured. The temperature alarm and audible buzzer response remain unverified. The three deliberate fault experiments have not been run.
+The STM32Cube target builds in PlatformIO. Fifteen Unity tests pass for alarm boundaries, navigation, state changes and brightness conversion. `pio check` reports no high or medium findings and 16 low C-style cast findings at STM32 HAL or FreeRTOS macro call sites. Wokwi confirmed DHT22 serial readings, LDR response, all four OLED pages, PIR `ACTIVE`/`INACTIVE` transitions, and the inactivity timeout. With PIR active, clockwise and reverse encoder actions produced both CLK/DT quadrature traces and `Input: display page changed` logs. The full ordered page-wrap sequence is not captured. A PB8 analyzer trace measured approximately 500 Hz PWM at 32 C, and another trace showed the buzzer output low after a normal-temperature sample. The OLED ALARM indicator and acoustic output were not independently confirmed. Temporary no-delay and high-priority MotionTask variants suppressed sensor output; bypassing the UART mutex did not produce visible interleaving in the short capture.
+
+The supporting [verification record](verification.md) includes the VCD traces and simulator screenshots. The traces demonstrate output-pin behavior; Wokwi does not replace electrical or acoustic measurements on a physical device.
 
 ## Challenges and Lessons Learned
 

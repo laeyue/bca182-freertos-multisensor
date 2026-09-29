@@ -14,7 +14,8 @@ Use these notes to explain the design in your own words. The source and actual s
 10. **Who owns the OLED?** DisplayTask alone, so I2C frame writes cannot interleave.
 11. **What if a high-priority task never blocks?** It can keep lower-priority sensor, alarm and display tasks Ready indefinitely, causing starvation.
 12. **Ready versus Blocked?** Ready can run once selected; Blocked waits for a time, message or event.
-13. **What do unit tests verify?** Alarm thresholds including exact boundaries, encoder wraparound, activity-state transitions, and brightness endpoint conversion. They do not prove HAL or Wokwi behavior.
-14. **What did static analysis find?** Two project style issues were fixed. Five remaining low messages come from C-style casts inside STM32 HAL/FreeRTOS macros. No medium or high issues were reported.
-15. **What changes on hardware?** Voltage levels, pull-ups, buzzer drive, power supply, sensor calibration, timing margins and EMI need electrical validation. Wokwi models do not establish those properties.
-
+13. **What do unit tests verify?** Alarm thresholds including exact boundaries, encoder wraparound, activity-state transitions, and brightness endpoint conversion. Wokwi additionally showed PA1/PA2 quadrature edges in both directions and an `Input: display page changed` message while active; it does not yet capture the complete page order and wrap in one sequence.
+14. **What did static analysis find?** `pio check` reported 16 low-severity C-style cast findings at HAL/FreeRTOS macro call sites, with no medium or high findings.
+15. **What did the buzzer check verify?** At 32 C, PB8 produced approximately 500 Hz PWM; after a 23.5 C sample, PB8 stayed low. The PWM output is verified, but no independent sound-level measurement was made.
+16. **What did the fault experiments show?** Removing MotionTask's 50 ms delay caused repeating heartbeats and suppressed sensor output; setting priority 4 with a 1 ms delay also starved sensor output. Bypassing the UART mutex did not visibly corrupt output in the short run, so that race was not reproduced.
+17. **What changes on hardware?** Voltage levels, pull-ups, buzzer drive, power supply, sensor calibration, timing margins and EMI need electrical validation. Wokwi models do not establish those properties.

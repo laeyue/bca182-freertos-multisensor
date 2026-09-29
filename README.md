@@ -4,7 +4,7 @@
 
 A simulated STM32F103C8 Blue Pill monitors temperature, relative humidity, ambient brightness, and PIR motion. A rotary encoder selects one measurement on an SSD1306 OLED. A 500 Hz PWM buzzer sounds outside the inclusive 18-30 C temperature range. After 15 seconds without PIR activity, the OLED blanks; new motion restores it. The firmware uses STM32Cube HAL and native FreeRTOS APIs, with no Arduino framework or libraries.
 
-The Blue Pill firmware builds and all 15 host logic tests pass. In VS Code Wokwi, checksum-valid DHT22 readings were observed, the LDR responded to its lux control, all four OLED pages rendered, and the 15-second inactivity transition occurred. Encoder page changes were observed, but the full direction-and-wrap sequence is not fully captured. PIR reactivation appeared on the OLED without a matching ACTIVE serial line. The temperature alarm and audible buzzer response remain unverified. See [the verification record](docs/verification.md) for the evidence and remaining cases.
+The Blue Pill firmware builds and all 15 host logic tests pass. VS Code Wokwi runs verified DHT22 readings, changing LDR values, all four OLED pages, PIR activity/inactivity, and encoder page-change handling. A PB8 logic-analyzer capture shows the high-temperature alarm output at approximately 500 Hz, and a recovery capture shows the output returning low after a normal sample. The exact four-page encoder wrap sequence, a legible OLED ALARM view, and an independent acoustic check are not captured. See [the verification record](docs/verification.md) for the evidence and remaining cases.
 
 ## Features
 
@@ -116,7 +116,7 @@ Install PlatformIO Core or the VS Code PlatformIO extension, then install Wokwi 
 pio run -e bluepill_f103c8
 ```
 
-The generated firmware is `.pio/build/bluepill_f103c8/firmware.bin`. Tested with PlatformIO Core 6.2.0 and ST STM32 platform 20.0.0. The latest production build used 21,616 B flash and 12,060 B static RAM; rerun the command for current totals.
+The generated firmware is `.pio/build/bluepill_f103c8/firmware.bin`. Tested with PlatformIO Core 6.2.0 and ST STM32 platform 20.0.0. The production build used 21,620 B flash and 12,060 B static RAM; rerun the command for current totals.
 
 ## Running the Wokwi Simulation
 
@@ -140,7 +140,7 @@ The latest run reports 16 low-severity C-style-cast findings and no medium or hi
 
 ## Functional Verification
 
-[The verification record](docs/verification.md) lists FT-01 through FT-10 with stimuli, expected outcomes and actual observations. FT-01 through FT-03 passed with OLED screenshots; motion timeout passed. Partial results and pending buzzer, encoder-wrap and PIR-log evidence remain explicit. No test is marked PASS based only on compilation.
+[The verification record](docs/verification.md) lists FT-01 through FT-10 with stimuli, expected outcomes and actual observations. DHT22, LDR, OLED pages, PIR active/inactive transitions, and PWM buzzer start/recovery have live Wokwi evidence. Encoder input handling and both quadrature directions are captured; the full ordered wrap sequence remains partial. The high-temperature PWM is verified electrically at PB8, while acoustic output and a legible OLED ALARM indicator remain unconfirmed. Reversible no-delay and high-priority MotionTask faults starved lower-priority sensor output; a short UART mutex-bypass run did not reproduce interleaving. No test is marked PASS based only on compilation.
 
 ### Wokwi evidence
 
@@ -154,6 +154,8 @@ The latest run reports 16 low-severity C-style-cast findings and no medium or hi
 
 ![OLED Motion page](docs/evidence/wokwi-oled-motion.png)
 
+[Buzzer high-temperature waveform and recovery](docs/evidence/wokwi-buzzer-alarm-on.vcd) · [PIR high/low trace](docs/evidence/wokwi-pir-cycle.vcd) · [Encoder quadrature trace](docs/evidence/wokwi-input-components.vcd)
+
 ## Engineering Decisions
 
 - Two sensor queues give display and alarm independent newest-value mailboxes. A single queue with two consumers would split readings unpredictably.
@@ -164,7 +166,7 @@ The latest run reports 16 low-severity C-style-cast findings and no medium or hi
 
 ## Limitations
 
-Interactive Wokwi checks cover DHT22 decoding through a 45.8 C input, LDR response, all four OLED pages, task wakeups and the inactive timeout. Exact encoder direction and wraparound, the PIR ACTIVE serial line, and alarm/buzzer behavior remain unverified. The high-temperature reading was confirmed, but its OLED alarm indicator and buzzer response were not. DHT22 sampling masks interrupts for several milliseconds. The inactivity timeout measures from the last observed PIR-high sample; the PIR simulator holds output high for about five seconds. No environmental sensor calibration is attempted. DHT errors suppress the alarm rather than sounding a fault tone. Wokwi circuitry does not establish electrical suitability for physical hardware.
+Interactive Wokwi checks cover DHT22 decoding through a 45.8 C input, LDR response, all four OLED pages, task wakeups, PIR high/low and inactivity, and encoder ISR/page-change handling in both directions. The full ordered encoder wrap sequence remains partial. A PB8 VCD proves the buzzer PWM waveform starts at about 500 Hz for a high-temperature sample and stops after a normal sample. An independently measured acoustic response and a legible OLED ALARM indicator remain unverified. The no-delay and high-priority fault experiments starved sensor output; the UART mutex-bypass run did not reproduce interleaving. DHT22 sampling masks interrupts for several milliseconds. The inactivity timeout measures from the last observed PIR-high sample; the normal PIR simulation hold is five seconds. No environmental sensor calibration is attempted. DHT errors suppress the alarm rather than sounding a fault tone. Wokwi circuitry does not establish electrical suitability for physical hardware.
 
 ## Future Improvements
 

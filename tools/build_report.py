@@ -62,7 +62,7 @@ def table(headers, rows, widths):
 p("BCA182 Laboratory Activity 1", "TitleCustom")
 p("Real-Time Multisensor Room Monitoring System", "CenteredCustom")
 p("Name: Kent Alexis Alia&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Section: B182&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Date: 9/29/26")
-p("Status: firmware build, host tests, DHT22/LDR behavior, and all four OLED pages verified in selected Wokwi runs. Encoder wraparound, PIR ACTIVE serial evidence, audible alarm behavior, and fault experiments remain incomplete.")
+p("Status: firmware build, 15 native tests, and static analysis passed. Wokwi verified DHT22 and LDR readings, all four OLED pages, PIR activity/inactivity, encoder input handling, and buzzer PWM start and recovery. The full encoder wrap sequence, a legible OLED ALARM indicator, and an independent acoustic measurement remain incomplete. Two reversible scheduling faults starved sensor output; the UART mutex-bypass trial did not reproduce interleaving.")
 
 section("1. Problem and Requirements")
 p("The device monitors temperature, humidity, relative brightness and motion with a simulated STM32F103C8. A rotary encoder selects one of four OLED pages. A PWM buzzer indicates temperatures strictly below 18 C or strictly above 30 C. A 15-second no-motion interval enters INACTIVE; PIR activity restores ACTIVE. The architecture must use multiple FreeRTOS tasks, queues, a mutex, an event mechanism and periodic execution.")
@@ -98,15 +98,16 @@ p("board.cpp initializes HSI/PLL at 64 MHz, GPIO, ADC1, I2C1, USART1 and two tim
 p("The LDR module's AO voltage decreases as simulated illumination increases. The firmware maps the 12-bit ADC code inversely into an approximate 0-100% relative brightness scale; it does not infer calibrated lux. The encoder's CLK falling edge is handled by EXTI1; its DT level determines direction. DisplayTask alone builds a 1 KB page buffer and writes it over I2C1 to the SSD1306. TIM4 channel 3 generates a 500 Hz, 50% duty cycle buzzer waveform.")
 
 section("5. Verification and Testing")
-p("The bluepill_f103c8 STM32Cube build succeeded using 21,616 of 65,536 flash bytes and 12,060 of 20,480 static RAM bytes. All 15 native Unity tests passed: five alarm threshold cases, four navigation cases, four state transition cases and two brightness endpoints. The configured cppcheck run passed with zero high and medium findings and 16 low style findings. These checks do not test HAL timing or wiring.")
+p("The bluepill_f103c8 STM32Cube firmware build used 21,620 of 65,536 flash bytes and 12,060 of 20,480 static RAM bytes. All 15 native Unity tests passed: five alarm thresholds, four navigation transitions, four state transitions and two brightness endpoints. Static analysis reported zero high, zero medium and 16 low C-style cast findings at STM32 HAL or FreeRTOS macro call sites. These checks do not test HAL timing or wiring.")
 table(["Functional tests", "Evidence state"], [
     ("DHT22 acquisition", "Checksum-valid Wokwi serial reads at 24 C / 40%, 27.8 C / 65%, 32 C / 65%, and 45.8 C / 65%; revised 40 us midpoint decoder"),
     ("FT-01 to FT-03: OLED sensor pages", "PASS: Temperature 27.8 C, Humidity 65.0%, and Light page rendered; corresponding screenshots are in docs/evidence/"),
-    ("FT-04 to FT-05: encoder navigation", "Partial: page changes across all four modes observed; exact reverse sequence and wraparound not captured"),
-    ("FT-06 to FT-07: buzzer thresholds", "Partial: valid 45.8 C sensor sample observed; OLED ALARM and audible buzzer behavior not confirmed; recovery pending"),
-    ("FT-08 to FT-10: motion/inactivity", "PASS: INACTIVE and blank OLED after timeout; partial: OLED reactivation observed, matching ACTIVE log not captured"),
+    ("FT-04 to FT-05: encoder navigation", "Partial: both CLK/DT directions and InputTask page-change logs verified while ACTIVE; complete ordered page wrap not captured"),
+    ("FT-06 to FT-07: buzzer thresholds", "Partial: PB8 waveform and recovery trace pass at about 500 Hz; a legible ALARM page and independent acoustic check were not captured"),
+    ("FT-08 to FT-10: motion/inactivity", "PASS: PIR high produced Motion: detected and State: ACTIVE; the earlier timeout run showed State: INACTIVE and a blank OLED"),
+    ("Fault experiments", "No delay and high-priority MotionTask variants suppressed sensor output; bypassing the UART mutex did not produce visible interleaving in the short run"),
 ], [2.7*inch, 3.95*inch])
-p("The OLED showed 27.8 C on Temperature, 65.0% on Humidity, and a relative percentage on Light; the Motion page also rendered. LDR serial output changed from 76% (ADC 980 at 501 lux) to 97% (ADC 130 at 13,183 lux). Wokwi serial output showed checksum-valid DHT readings at 24 C / 40%, 27.8 C / 65%, 32 C / 65%, and 45.8 C / 65%, as well as recurring MotionTask heartbeats. The inactivity test logged State: INACTIVE and the OLED blanked. An ACTIVE OLED reactivation was seen, but its matching serial transition was not captured. The 45.8 C sensor sample verifies the stimulus and acquisition, but no matching OLED ALARM state or audible buzzer was confirmed. The original startup delay symptom was not repeated in the clean reload run: sensor samples and MotionTask heartbeats continued. The full-circuit and OLED screenshots are in docs/evidence/. FT-01 to FT-03 and FT-09 are marked PASS in docs/verification.md; FT-04, FT-06, FT-08 and FT-10 are partial, while remaining alarm recovery and reverse encoder behavior are pending. The three deliberate scheduling/UART fault experiments remain pending.")
+p("Separate OLED screenshots show all four pages; LDR output changed from 76% at 501 lux to 97% at 13,183 lux. Checksum-valid DHT samples ranged from 24 C to 45.8 C. At 32 C, the PB8 VCD shows 4,096 transitions at about 500 Hz; after a valid 23.5 C sample it stayed low. PIR activation logged ACTIVE, and a separate timeout test logged INACTIVE with the OLED blank. Both encoder directions and page-change logs were observed, but the ordered wrap was not captured. A clean production reload again showed sensor samples and MotionTask heartbeats. No-delay and high-priority faults suppressed sensor output; the UART mutex-bypass test showed no visible interleaving. Evidence is in docs/evidence/.")
 
 section("6. Static Code Analysis")
 p("The latest <b>pio check</b> run passed with zero high, zero medium and 16 low style messages. These C-style-cast reports point to STM32 HAL register or FreeRTOS macro expansions at board.cpp, input.cpp and main.cpp call sites; no high or medium finding was reported.")
@@ -116,24 +117,24 @@ table(["Finding", "Location / cause", "Resolution"], [
 
 section("7. Engineering Discussion")
 p("The STM32F103C8 has only 20 KB RAM. A one-kilobyte static OLED framebuffer, one-slot mailboxes and small task stacks keep static RAM below 60% in the measured build. A queue-per-consumer costs some RAM but avoids lost sensor updates. DHT pulse capture disables interrupts for roughly 4 ms, which can disturb precise task latency; timer input capture would be preferable for a production design. The alarm is muted in INACTIVE according to the stated ACTIVE behavior, but a safety-critical monitor could choose to keep it active instead.")
-p("The evidence includes Wokwi checks for DHT22 values through 45.8 C, LDR response, all four OLED pages and the 15-second inactivity transition in addition to build, unit tests and static analysis. Exact encoder directions and wraparound, the PIR ACTIVE serial line, and audible alarm behavior remain to be confirmed. Physical deployment additionally needs voltage, pull-up, EMI, timing and thermal validation. Sensor calibration and fault-tolerant alarming are outside this laboratory prototype.")
+p("The evidence includes Wokwi checks for DHT22 values through 45.8 C, LDR response, four OLED pages, both encoder directions, PIR active/inactive transitions, and 500 Hz buzzer PWM start and recovery, in addition to build, unit tests and static analysis. The no-delay and high-priority MotionTask faults suppressed sensor output. The UART mutex-bypass trial showed no visible interleaving, so that race was not reproduced. Exact ordered encoder wraparound, the OLED ALARM indication, and acoustic output remain unverified. Physical deployment additionally needs voltage, pull-up, EMI, timing and thermal validation. Sensor calibration and fault-tolerant alarming are outside this laboratory prototype.")
 
 section("8. Requirements Traceability")
 table(["Req.", "Implementation", "Verification"], [
     ("FR-01", "SensorTask DHT temperature", "Valid Wokwi readings observed through 45.8 C; OLED FT-01 pass at 27.8 C"),
     ("FR-02", "SensorTask DHT humidity", "Wokwi serial value and OLED FT-02 pass at 65.0%"),
     ("FR-03", "SensorTask ADC1 relative light", "Changed Wokwi ADC readings and OLED FT-03 pass"),
-    ("FR-04", "MotionTask PIR", "PIR page/reactivation partial; matching ACTIVE serial line not captured"),
+    ("FR-04", "MotionTask PIR", "PASS: motion detected and ACTIVE serial logs observed; high/low trace captured"),
     ("FR-05", "DisplayTask OLED", "Temperature, Humidity, Light and Motion pages rendered in Wokwi"),
-    ("FR-06", "InputTask encoder", "Page changes observed; full directions and wraparound not captured"),
-    ("FR-07", "AlarmTask PWM buzzer", "45.8 C input observed; alarm indicator and buzzer not confirmed"),
-    ("FR-08", "StateTask ACTIVE/INACTIVE", "INACTIVE pass; OLED reactivation observed without ACTIVE log"),
+    ("FR-06", "InputTask encoder", "Both input directions and page-change logs captured; exact page wrap remains partial"),
+    ("FR-07", "AlarmTask PWM buzzer", "PASS for PB8 PWM start and stop: about 500 Hz at 32 C, low after 23.5 C; no acoustic measurement"),
+    ("FR-08", "StateTask ACTIVE/INACTIVE", "PASS: ACTIVE and INACTIVE state logs observed with OLED off/on behavior"),
     ("FR-09", "StateTask 15 s timeout", "Unit timeout and Wokwi INACTIVE observation; FT-09 pass"),
-    ("FR-10", "StateTask PIR reactivation", "Unit reactivation; OLED reactivation partial, ACTIVE serial line pending"),
+    ("FR-10", "StateTask PIR reactivation", "PASS: PIR trigger after inactivity produced Motion: detected and State: ACTIVE"),
 ], [.55*inch, 2.45*inch, 3.65*inch])
 
 section("9. Conclusion")
-p("The project demonstrates a modular STM32Cube/FreeRTOS design with separate task responsibilities, intentional IPC, time-based state management and deterministic host tests. Wokwi verified DHT22 acquisition up to 45.8 C, LDR response, all four OLED pages and the inactivity timeout. Remaining evidence includes exact encoder directions and wraparound, the PIR ACTIVE serial transition, audible alarm behavior and the three fault experiments. This local report is not a claim that the entire circuit is simulator-verified.")
+p("The project demonstrates a modular STM32Cube/FreeRTOS design with separate task responsibilities, intentional IPC, time-based state management and deterministic host tests. Wokwi verified DHT22 acquisition up to 45.8 C, LDR response, all four OLED pages, PIR activity/inactivity, encoder ISR response in both directions, and buzzer PWM start and recovery. The fault experiments reproduced starvation when a frequent MotionTask did not block or ran at excessive priority; the short UART mutex-bypass trial did not reproduce a corrupted line. The exact encoder page order and wrap, the OLED ALARM indicator, and independent acoustic output remain outstanding.")
 
 section("References")
 p("BCA182 Laboratory Activity 1 (MSU-IIT, 2026); Aosong AM2302 Technical Manual; PlatformIO STM32Cube documentation; Wokwi STM32 Blue Pill documentation; FreeRTOS kernel source distributed in STM32CubeF1.")

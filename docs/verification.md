@@ -48,32 +48,55 @@ checksum-valid `24.0 C, 40.0 %` and `32.0 C, 65.0 %` readings after changing the
 DHT controls. No checksum-failure diagnostic appeared in the observed samples.
 The timing is based on the [Aosong AM2302 technical manual](https://www.aosong.com/uploadfiles/2025/04/20250417105409216.pdf).
 
+## Buzzer output fix and verification
+
+The high-temperature test initially showed that TIM4 was running while PB8
+produced no PWM. The PB8 alternate-function push-pull setup left
+`GPIO_InitTypeDef.Speed` at zero; on the STM32F1 this selects the input mode,
+so the timer output never reached the pin. `boardInit()` now configures PB8 at
+`GPIO_SPEED_FREQ_HIGH` before starting TIM4 channel 3.
+
+With the production firmware, the DHT22 was set to 32.0 C / 65.0%. The live
+serial monitor showed that checksum-valid reading, and the logic-analyzer
+capture at PB8 contains 4,096 transitions. The measured mean period is about
+2.000 ms (approximately 500 Hz) with roughly 50% duty cycle. This proves the
+MCU output is producing the configured alarm waveform; it does not constitute
+an independent acoustic measurement. The Wokwi buzzer is connected to PB8.
+
+For recovery, the DHT22 was changed live to 23.5 C / 65.0%. The next valid
+sample appeared in the serial log, and the recovery VCD ends with PB8 low and
+remaining low after the normal-temperature sample. The screenshot and VCD are
+stored as `evidence/wokwi-buzzer-recovery.png` and
+`evidence/wokwi-buzzer-recovery.vcd`. The no-PWM screenshot records the
+pre-fix symptom.
+
 | ID | Stimulus | Expected result | Actual observation | Result |
 | --- | --- | --- | --- | --- |
 | FT-01 | Set DHT22 to 28 C, select Temperature | OLED shows about 28.0 C within 2 s | DHT control was set to 27.8 C; the Temperature page showed 27.8 C and ACTIVE | PASS |
 | FT-02 | Set DHT22 to 65%, select Humidity | OLED shows about 65.0% within 2 s | Humidity page showed 65.0% and ACTIVE; serial output also reported 65.0% | PASS |
 | FT-03 | Change LDR lux control, select Light | Relative brightness percentage changes | Light page rendered 97%; serial output changed from 76% (ADC 980 at 501 lux) to 97% (ADC 130 at 13,183 lux) | PASS |
-| FT-04 | Rotate encoder clockwise | Temperature -> Humidity -> Light -> Motion -> Temperature | Wokwi keyboard rotation changed the OLED across Temperature, Humidity, Light and Motion pages; exact ordered sequence and wrap step were not captured in one run | Partial |
-| FT-05 | Rotate encoder counterclockwise | Reverse sequence with wraparound | Not captured reliably | Pending |
-| FT-06 | Set DHT22 above 30 C | Buzzer sounds, OLED alarm indicator appears | DHT control and checksum-valid serial sample showed 45.8 C / 65.0%; the ALARM indicator and audible buzzer were not confirmed | Partial |
-| FT-07 | Return DHT22 to 24 C | Buzzer stops within next sensor sample | Alarm-on state was not confirmed, so buzzer recovery was not tested | Pending |
-| FT-08 | Trigger PIR | State log shows ACTIVE and OLED on | Wokwi motion control restored an ACTIVE OLED page in an earlier run; matching `State: ACTIVE` serial evidence was not captured | Partial |
+| FT-04 | Rotate encoder clockwise | Temperature -> Humidity -> Light -> Motion -> Temperature | During ACTIVE, the clockwise KY-040 action generated CLK/DT edges in the analyzer and `Input: display page changed` in USART1; separate OLED captures show all four pages, but the exact order and wrap step were not recorded as one sequence | Partial |
+| FT-05 | Rotate encoder counterclockwise | Reverse sequence with wraparound | During ACTIVE, the reverse action produced the opposite CLK/DT phase sequence and another `Input: display page changed` message; exact reverse page order and wrap step were not captured | Partial |
+| FT-06 | Set DHT22 above 30 C | Buzzer sounds, OLED alarm indicator appears | At 32.0 C / 65.0%, serial showed a valid sample and PB8 VCD measured approximately 500 Hz at 50% duty; a legible OLED ALARM indication and independent acoustic check were not captured | Partial |
+| FT-07 | Return DHT22 to 24 C | Buzzer stops within next sensor sample | After changing the live DHT22 to 23.5 C / 65.0%, the next valid sample appeared and the recovery VCD showed PB8 low afterward | PASS |
+| FT-08 | Trigger PIR | State log shows ACTIVE and OLED on | During Wokwi motion input, USART1 showed `Motion: detected` and `State: ACTIVE`; the OLED was lit | PASS |
 | FT-09 | Wait 15 s after PIR output returns low | State log shows INACTIVE and OLED blanks | `State: INACTIVE` was observed after inactivity, with the OLED blank | PASS |
-| FT-10 | Trigger PIR while INACTIVE | OLED restores and state log shows ACTIVE | OLED reactivation was observed; matching `State: ACTIVE` serial evidence was not captured | Partial |
+| FT-10 | Trigger PIR while INACTIVE | OLED restores and state log shows ACTIVE | After inactivity, PIR activation produced `Motion: detected` and `State: ACTIVE`; the OLED returned to its active display | PASS |
 
 ## Deliberate FreeRTOS fault experiments
 
-These experiments should be performed in a temporary branch or with reversible edits. The shipping code keeps all blocking and synchronization intact. Record real observations; predicted effects alone do not fulfill the experiment requirement.
+These controlled faults were applied as reversible edits, built and run in Wokwi, then removed. The shipping firmware retains its periodic blocking and UART mutex. Results below describe observed behavior, not predictions.
 
 | Experiment | Temporary change | What to observe | Actual observation | Status |
 | --- | --- | --- | --- | --- |
-| Remove blocking | Remove `vTaskDelayUntil()` in `MotionTask` | CPU load, lower-priority display/sensor latency, starvation | Not performed | Pending |
-| Raise priority | Give frequent MotionTask an unnecessarily high priority while reducing its delay | Scheduling responsiveness of other tasks | Not performed | Pending |
-| Remove mutex | Bypass `serialMutex` in `boardLog` while several tasks log | Interleaved UART lines | Not performed | Pending |
+| Remove blocking | Remove `vTaskDelayUntil()` in `MotionTask` | CPU load, lower-priority display/sensor latency, starvation | MotionTask heartbeats repeated continuously; the Wokwi speed indicator fell to 61-67%, and no sensor sample appeared during the observed interval | Observed |
+| Raise priority | Set MotionTask priority to 4 and reduce its delay to 1 ms | Scheduling responsiveness of other tasks | The run reached 20 simulated seconds with recurring MotionTask heartbeats but no sensor sample; the simulator ran at about 90-95% speed | Observed starvation |
+| Remove mutex | Bypass `serialMutex` in `boardLog` while MotionTask and SensorTask log | Interleaved UART lines | No garbled or interleaved line was visible in the short Wokwi capture; SensorTask and MotionTask messages remained complete. The race was not reproduced at this log rate | Inconclusive |
 
-## Evidence to capture
+## Evidence record
 
-1. [Wokwi full-circuit screenshot](evidence/wokwi-full-circuit.png), [Temperature page](evidence/wokwi-oled-28c-temperature.png), [Humidity page](evidence/wokwi-oled-humidity.png), [Light page](evidence/wokwi-oled-light.png), and [Motion page](evidence/wokwi-oled-motion.png).
-2. Live Wokwi serial output showed repeated DHT22 samples, LDR readings, and MotionTask heartbeats while PIR was low. `State: INACTIVE` was captured; a matching PIR-triggered `State: ACTIVE` line remains outstanding.
-3. The 45.8 C / 65.0% sample confirms high-temperature acquisition. The corresponding OLED ALARM state and audible buzzer response remain unverified.
-4. Before/after scheduling observations for each deliberate fault experiment.
+1. [Full circuit](evidence/wokwi-full-circuit.png), [final production run](evidence/wokwi-production-final.png), [Temperature](evidence/wokwi-oled-28c-temperature.png), [Humidity](evidence/wokwi-oled-humidity.png), [Light](evidence/wokwi-oled-light.png), and [Motion](evidence/wokwi-oled-motion.png) screenshots record the circuit, stable task wakeups, and page rendering.
+2. [Encoder trace](evidence/wokwi-input-components.vcd) contains PA1/PA2 quadrature changes in both directions. [Active encoder screenshot](evidence/wokwi-input-components.png) shows the `Input: display page changed` log while PIR is high. [Encoder pulse screenshot](evidence/wokwi-encoder-pulses.png) records the original pulse check.
+3. [PIR high/low trace](evidence/wokwi-pir-cycle.vcd) records the sensor output pulse returning low. The live Wokwi serial observation included `Motion: detected` and `State: ACTIVE`; the active encoder screenshot also shows a PIR-high heartbeat during page-change handling.
+4. [Buzzer high-temperature waveform](evidence/wokwi-buzzer-alarm-on.vcd) and [test screenshot](evidence/wokwi-buzzer-pwm.png) document the 32 C PWM output; [recovery waveform](evidence/wokwi-buzzer-recovery.vcd) and [screenshot](evidence/wokwi-buzzer-recovery.png) document return to low after the 23.5 C sample. [Pre-fix no-PWM screenshot](evidence/wokwi-buzzer-no-pwm.png) is retained as a diagnostic baseline.
+5. Temporary fault observations: [no-blocking run](evidence/experiment-no-blocking.png), [raised-priority run](evidence/experiment-high-priority.png), and [mutex-bypass run](evidence/experiment-no-mutex.png). Production blocking and UART synchronization were restored afterward.
