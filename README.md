@@ -4,7 +4,7 @@
 
 A simulated STM32F103C8 Blue Pill monitors temperature, relative humidity, ambient brightness, and PIR motion. A rotary encoder selects one measurement on an SSD1306 OLED. A 500 Hz PWM buzzer sounds outside the inclusive 18-30 C temperature range. After 15 seconds without PIR activity, the OLED blanks; new motion restores it. The firmware uses STM32Cube HAL and native FreeRTOS APIs, with no Arduino framework or libraries.
 
-The Blue Pill firmware builds and all 15 host logic tests pass. VS Code Wokwi runs verified DHT22 readings, changing LDR values, all four OLED pages, PIR activity/inactivity, and encoder page-change handling. A PB8 logic-analyzer capture shows the high-temperature alarm output at approximately 500 Hz, and a recovery capture shows the output returning low after a normal sample. The exact four-page encoder wrap sequence, a legible OLED ALARM view, and an independent acoustic check are not captured. See [the verification record](docs/verification.md) for the evidence and remaining cases.
+The Blue Pill firmware builds and all 15 host logic tests pass. VS Code Wokwi runs verified DHT22 readings, changing LDR values, all four OLED pages, PIR activity/inactivity, and both encoder page sequences with wraparound. At 33.1 C, the OLED displayed ALARM and the Wokwi buzzer activity icon appeared; a PB8 logic-analyzer capture shows approximately 500 Hz PWM, and a recovery capture shows the output returning low after a normal sample. Independent physical sound level and physical-board behavior have not been measured. See [the verification record](docs/verification.md) for evidence and limits.
 
 ## Features
 
@@ -140,7 +140,7 @@ The latest run reports 16 low-severity C-style-cast findings and no medium or hi
 
 ## Functional Verification
 
-[The verification record](docs/verification.md) lists FT-01 through FT-10 with stimuli, expected outcomes and actual observations. DHT22, LDR, OLED pages, PIR active/inactive transitions, and PWM buzzer start/recovery have live Wokwi evidence. Encoder input handling and both quadrature directions are captured; the full ordered wrap sequence remains partial. The high-temperature PWM is verified electrically at PB8, while acoustic output and a legible OLED ALARM indicator remain unconfirmed. Reversible no-delay and high-priority MotionTask faults starved lower-priority sensor output; a short UART mutex-bypass run did not reproduce interleaving. No test is marked PASS based only on compilation.
+[The verification record](docs/verification.md) lists FT-01 through FT-10 with stimuli, expected outcomes and actual observations. DHT22, LDR, OLED pages, PIR active/inactive transitions, both encoder page sequences with wraparound, and the high-temperature alarm's OLED/buzzer response passed in Wokwi. PB8 PWM start/recovery is retained as VCD evidence. Independent physical sound level and physical-board behavior remain unmeasured. Reversible no-delay and high-priority MotionTask faults starved lower-priority sensor output; a short UART mutex-bypass run did not reproduce interleaving. No test is marked PASS based only on compilation.
 
 ### Wokwi evidence
 
@@ -166,7 +166,7 @@ The latest run reports 16 low-severity C-style-cast findings and no medium or hi
 
 ## Limitations
 
-Interactive Wokwi checks cover DHT22 decoding through a 45.8 C input, LDR response, all four OLED pages, task wakeups, PIR high/low and inactivity, and encoder ISR/page-change handling in both directions. The full ordered encoder wrap sequence remains partial. A PB8 VCD proves the buzzer PWM waveform starts at about 500 Hz for a high-temperature sample and stops after a normal sample. An independently measured acoustic response and a legible OLED ALARM indicator remain unverified. The no-delay and high-priority fault experiments starved sensor output; the UART mutex-bypass run did not reproduce interleaving. DHT22 sampling masks interrupts for several milliseconds. The inactivity timeout measures from the last observed PIR-high sample; the normal PIR simulation hold is five seconds. No environmental sensor calibration is attempted. DHT errors suppress the alarm rather than sounding a fault tone. Wokwi circuitry does not establish electrical suitability for physical hardware.
+Interactive Wokwi checks cover DHT22 decoding through a 45.8 C input, LDR response, all four OLED pages, task wakeups, PIR high/low and inactivity, both ordered encoder page sequences with wraparound, and the OLED/buzzer high-temperature response. A PB8 VCD proves the buzzer PWM waveform starts at about 500 Hz for a high-temperature sample and stops after a normal sample. No independent physical acoustic level or physical-board behavior has been measured. The no-delay and high-priority fault experiments starved sensor output; the UART mutex-bypass run did not reproduce interleaving. DHT22 sampling masks interrupts for several milliseconds. The inactivity timeout measures from the last observed PIR-high sample; the normal PIR simulation hold is five seconds. No environmental sensor calibration is attempted. DHT errors suppress the alarm rather than sounding a fault tone. Wokwi circuitry does not establish electrical suitability for physical hardware.
 
 ## Future Improvements
 

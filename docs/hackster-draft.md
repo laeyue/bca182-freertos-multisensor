@@ -55,9 +55,9 @@ The DHT22 driver releases PB12 into input-pull-up mode and samples each data bit
 
 The firmware builds for `bluepill_f103c8`. All 15 native Unity tests pass for alarm thresholds, page navigation logic, activity-state transitions, and brightness conversion. PlatformIO static analysis reported zero high and zero medium findings, with 16 low C-style-cast findings at STM32 HAL or FreeRTOS macro call sites.
 
-Live VS Code Wokwi runs showed checksum-valid DHT22 readings, changing LDR output, all four OLED pages, PIR ACTIVE/INACTIVE transitions, and page-change logs for both encoder directions. A follow-up live run reached `Sensor: DHT start delay finished`, a valid `24.0 C, 40.0 %` sample, light ADC output, and recurring MotionTask heartbeats, confirming that the scheduler wakeup path progressed past the original stall symptom.
+Live VS Code Wokwi runs showed checksum-valid DHT22 readings, changing LDR output, all four OLED pages, PIR ACTIVE/INACTIVE transitions, and page-change logs for both encoder directions. On 2026-09-30, the full clockwise sequence (Temperature -> Humidity -> Light -> Motion -> Temperature) and reverse sequence (Temperature -> Motion -> Light -> Humidity -> Temperature) were observed while ACTIVE. At 33.1 C / 66.0%, the OLED showed ALARM and the Wokwi buzzer activity icon appeared; the retained PB8 trace measures about 500 Hz at 50% duty cycle, with a recovery trace returning low after a normal-temperature sample. These are simulator results; no independent physical sound-level measurement or physical-board validation has been made. The test-only PIR hold was restored to its normal five-second value after the run.
 
-Some acceptance cases remain partial. The complete clockwise and counterclockwise OLED page order with wraparound was not captured in one run. At 32 C, a PB8 analyzer trace measured about 500 Hz at 50% duty cycle, and a recovery trace showed PB8 low after a normal-temperature sample. A legible OLED ALARM view and independent acoustic measurement were not captured. The firmware output waveform is verified; sound and the alarm screen are not claimed as verified.
+The Wokwi functional checks for encoder wraparound and the high-temperature alarm passed. The independent physical sound level remains unmeasured, and the design has not been validated on physical hardware.
 
 Reversible fault experiments showed that removing MotionTask's blocking delay or raising its priority suppressed sensor output during the observed runs. Bypassing the UART mutex did not reproduce visible line interleaving in the short capture. These are observations from the simulator; they do not replace testing with physical hardware.
 
@@ -69,7 +69,7 @@ A single sensor queue with two consumers would split updates between the display
 
 ## Limitations and Future Improvements
 
-The exact ordered encoder wrap sequence and the OLED ALARM indication still need a captured Wokwi run. A separate acoustic check was not available in the current verification evidence. The design has not been validated on a physical board. Future work could add timer input capture for DHT pulses, calibrated light measurements, measured task latency, and a sensor fault alarm.
+The design has not been validated on a physical board, and no independent acoustic level was measured. Future work could add timer input capture for DHT pulses, calibrated light measurements, measured task latency, and a sensor fault alarm.
 
 ## References
 
