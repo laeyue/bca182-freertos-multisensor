@@ -62,7 +62,7 @@ STM32 Blue Pill, DHT22, Wokwi photoresistor module, PIR motion sensor, KY-040 ro
 
 | Device | Signal | STM32 pin | Driver |
 | --- | --- | --- | --- |
-| DHT22 | SDA | PB12 | Open-drain GPIO, TIM2 microsecond timing |
+| DHT22 | SDA | PB12 | 5.1 kΩ pull-up to 3.3 V; open-drain start, input-pull-up receive |
 | LDR | AO | PA0 | ADC1 channel 0 |
 | PIR | OUT | PB13 | GPIO input |
 | Encoder | CLK / DT | PA1 / PA2 | EXTI1 / GPIO input |

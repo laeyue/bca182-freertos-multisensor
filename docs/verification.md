@@ -25,6 +25,22 @@ These checks rule out a missing or weak exception-vector mapping in the linked
 image. They do not show whether PendSV runs in Wokwi or whether UART output is
 being lost after the delay.
 
+## DHT22 bus fix
+
+The failed read was waiting for the sensor's response-high edge. PB12 stayed in
+output open-drain mode after the host released the bus, so the STM32F1 internal
+pull-up was not enabled. The [AM2302 datasheet](https://files.seeedstudio.com/wiki/Grove-Temperature_and_Humidity_Sensor_Pro/res/AM2302-EN.pdf)
+recommends an approximately 5.1 kΩ external pull-up and releasing the bus by
+switching the MCU pin to input. The diagram now includes that resistor, and the
+driver switches PB12 to input-pull-up for receive and waits two seconds after
+power-up before the first sample.
+
+Verified in a freshly reloaded VS Code Wokwi run: the default 24 °C / 40% sensor
+settings repeatedly produced checksum-valid `24.0 C, 40.0 %` readings. While
+the simulation was running, changing the sensor controls to 31 °C / 53% produced
+`31.0 C, 53.0 %` on subsequent samples. MotionTask heartbeats continued during
+the reads.
+
 | ID | Stimulus | Expected result | Actual observation | Result |
 | --- | --- | --- | --- | --- |
 | FT-01 | Set DHT22 to 28 C, select Temperature | OLED shows about 28.0 C within 2 s | Not observed | Pending |

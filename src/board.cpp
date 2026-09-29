@@ -53,11 +53,9 @@ void boardInit() {
 
   GPIO_InitTypeDef gpio = {};
   gpio.Pin = DHT_PIN;
-  gpio.Mode = GPIO_MODE_OUTPUT_OD;
+  gpio.Mode = GPIO_MODE_INPUT;
   gpio.Pull = GPIO_PULLUP;
-  gpio.Speed = GPIO_SPEED_FREQ_HIGH;
   HAL_GPIO_Init(GPIOB, &gpio);
-  HAL_GPIO_WritePin(GPIOB, DHT_PIN, GPIO_PIN_SET);
   gpio.Pin = BUZZER_PIN;
   gpio.Mode = GPIO_MODE_AF_PP;
   gpio.Pull = GPIO_NOPULL;
