@@ -91,6 +91,10 @@ The firmware builds for `bluepill_f103c8`. All 15 native Unity tests pass for al
 
 Live VS Code Wokwi runs showed checksum-valid DHT22 readings, changing LDR output, all four OLED pages, PIR ACTIVE/INACTIVE transitions, and page-change logs for both encoder directions. On 2026-09-30, the full clockwise sequence (Temperature -> Humidity -> Light -> Motion -> Temperature) and reverse sequence (Temperature -> Motion -> Light -> Humidity -> Temperature) were observed while ACTIVE. At 33.1 °C / 66.0%, the OLED showed ALARM and the Wokwi buzzer activity icon appeared; the retained PB8 trace measures about 500 Hz at 50% duty cycle, with a recovery trace returning low after a normal-temperature sample. These are simulator results; no independent physical sound-level measurement or physical-board validation has been made. The test-only PIR hold was restored to its normal five-second value after the run.
 
+![Wokwi serial logs from a sensor run](https://raw.githubusercontent.com/laeyue/bca182-freertos-multisensor/main/docs/evidence/wokwi-hackster-serial-closeup.png)
+
+_The serial output records PIR heartbeats, the completed DHT22 read, and the photoresistor ADC reading._
+
 The Wokwi functional checks for encoder wraparound and the high-temperature alarm passed. The independent physical sound level remains unmeasured, and the design has not been validated on physical hardware.
 
 ![Measured PB8 PWM waveform](https://raw.githubusercontent.com/laeyue/bca182-freertos-multisensor/main/docs/evidence/wokwi-buzzer-500hz-trace.png)
